@@ -10,6 +10,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-gonic/gin"
 	"github.com/volcengine/ve-tos-golang-sdk/v2/tos"
 )
@@ -138,25 +139,28 @@ func TosLogger() gin.HandlerFunc {
 			content["errors"] = c.Errors.Errors()
 
 			path := prefix + "/" + content["request_id"].(string) + ".json"
-			output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
-				PutObjectBasicInput: tos.PutObjectBasicInput{
-					Bucket: bucketName,
-					Key:    path,
-				},
-				// Fix: Marshal now returns ([]byte, error); handle error first
-				Content: func() io.ReadCloser {
-					data, err := common.Marshal(content)
-					if err != nil {
-						logger.LogError(c, "Failed to marshal content: "+err.Error())
-						data = []byte("{}")
-					}
-					return io.NopCloser(bytes.NewReader(data))
-				}(),
+
+			gopool.Go(func() {
+				output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
+					PutObjectBasicInput: tos.PutObjectBasicInput{
+						Bucket: bucketName,
+						Key:    path,
+					},
+					// Fix: Marshal now returns ([]byte, error); handle error first
+					Content: func() io.ReadCloser {
+						data, err := common.Marshal(content)
+						if err != nil {
+							logger.LogError(c, "Failed to marshal content: "+err.Error())
+							data = []byte("{}")
+						}
+						return io.NopCloser(bytes.NewReader(data))
+					}(),
+				})
+				if err != nil {
+					logger.LogError(c, "Failed to put object: "+err.Error())
+				}
+				logger.LogInfo(c, fmt.Sprintf("TOS PutObjectV2 Request ID: %s, Path: %s", output.RequestID, path))
 			})
-			if err != nil {
-				logger.LogError(c, "Failed to put object: "+err.Error())
-			}
-			logger.LogInfo(c, fmt.Sprintf("TOS PutObjectV2 Request ID: %s, Path: %s", output.RequestID, path))
 		} else {
 			// 执行请求处理
 			c.Next()
