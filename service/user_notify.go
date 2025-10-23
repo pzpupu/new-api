@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -24,8 +25,13 @@ func NotifyRootUser(t string, subject string, content string) {
 
 func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data dto.Notify) error {
 	notifyType := userSetting.NotifyType
+
 	if notifyType == "" {
-		notifyType = dto.NotifyTypeEmail
+		if os.Getenv("FEISHU_WEBHOOK_URL") != "" {
+			notifyType = dto.NotifyTypeFeishu
+		} else {
+			notifyType = dto.NotifyTypeEmail
+		}
 	}
 
 	// Check notification limit
@@ -75,6 +81,13 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 			return nil
 		}
 		return sendGotifyNotify(gotifyUrl, gotifyToken, userSetting.GotifyPriority, data)
+	case dto.NotifyTypeFeishu:
+		feishuURL := os.Getenv("FEISHU_WEBHOOK_URL")
+		if feishuURL == "" {
+			common.SysLog(fmt.Sprintf("user %d has no feishu url, skip sending feishu", userId))
+			return nil
+		}
+		return sendFeishuNotify(feishuURL, userId, data)
 	}
 	return nil
 }
@@ -249,6 +262,49 @@ func sendGotifyNotify(gotifyUrl string, gotifyToken string, priority int, data d
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return fmt.Errorf("gotify request failed with status code: %d", resp.StatusCode)
 		}
+	}
+
+	return nil
+}
+
+func sendFeishuNotify(feishuURL string, userId int, data dto.Notify) error {
+	// 不使用缓存，通知不会频繁触发
+	user, err := model.GetUserById(userId, false)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %v", err)
+	}
+
+	content := fmt.Sprintf("用户 %s，ID: %d，额度即将用尽，当前剩余额度为 %s，为了不影响使用，请及时处理。", user.DisplayName, userId, data.Values[1])
+
+	payload := map[string]interface{}{
+		"msg_type": "text",
+		"content": map[string]interface{}{
+			"text": content,
+		},
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal feishu payload: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, feishuURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create feishu request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("User-Agent", "NewAPI-Feishu-Notify/1.0")
+
+	client := GetHttpClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send feishu request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("feishu request failed with status code: %d", resp.StatusCode)
 	}
 
 	return nil
