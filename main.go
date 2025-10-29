@@ -153,6 +153,12 @@ func main() {
 	InjectUmamiAnalytics()
 	InjectGoogleAnalytics()
 
+	if os.Getenv("TOS_ENABLED") == "true" {
+		middleware.TosInit()
+		server.Use(middleware.TosLogger())
+		common.SysLog("tos logger enabled")
+	}
+
 	// 设置路由
 	router.SetRouter(server, buildFS, indexPage)
 	var port = os.Getenv("PORT")

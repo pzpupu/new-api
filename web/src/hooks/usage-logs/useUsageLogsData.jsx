@@ -474,6 +474,12 @@ export const useLogsData = () => {
           value: other.request_path,
         });
       }
+      if (other?.request_id) {
+        expandDataLocal.push({
+          key: t('请求记录'),
+          value: `tos://cn-open-sota/newapi_logs/${other.request_id}.json`,
+        });
+      }
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
 
