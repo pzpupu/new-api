@@ -533,7 +533,11 @@ func TestChannel(c *gin.Context) {
 var testAllChannelsLock sync.Mutex
 var testAllChannelsRunning bool = false
 
-func testAllChannels(notify bool) error {
+func testAllChannels(notify bool, onlyAutoDisabled ...bool) error {
+	filterOnlyAutoDisabled := false
+	if len(onlyAutoDisabled) > 0 {
+		filterOnlyAutoDisabled = onlyAutoDisabled[0]
+	}
 
 	testAllChannelsLock.Lock()
 	if testAllChannelsRunning {
@@ -542,7 +546,13 @@ func testAllChannels(notify bool) error {
 	}
 	testAllChannelsRunning = true
 	testAllChannelsLock.Unlock()
-	channels, getChannelErr := model.GetAllChannels(0, 0, true, false)
+	var channels []*model.Channel
+	var getChannelErr error
+	if filterOnlyAutoDisabled {
+		channels, getChannelErr = model.GetChannelsByStatus(common.ChannelStatusAutoDisabled)
+	} else {
+		channels, getChannelErr = model.GetAllChannels(0, 0, true, false)
+	}
 	if getChannelErr != nil {
 		return getChannelErr
 	}
@@ -628,7 +638,7 @@ func AutomaticallyTestChannels() {
 				time.Sleep(time.Duration(int(math.Round(frequency))) * time.Minute)
 				common.SysLog(fmt.Sprintf("automatically test channels with interval %f minutes", frequency))
 				common.SysLog("automatically testing all channels")
-				_ = testAllChannels(false)
+				_ = testAllChannels(true, true)
 				common.SysLog("automatically channel test finished")
 				if !operation_setting.GetMonitorSetting().AutoTestChannelEnabled {
 					break

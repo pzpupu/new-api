@@ -270,6 +270,12 @@ func GetAllChannels(startIdx int, num int, selectAll bool, idSort bool) ([]*Chan
 	return channels, err
 }
 
+func GetChannelsByStatus(status int) ([]*Channel, error) {
+	var channels []*Channel
+	err := DB.Where("status = ?", status).Find(&channels).Error
+	return channels, err
+}
+
 func GetChannelsByTag(tag string, idSort bool) ([]*Channel, error) {
 	var channels []*Channel
 	order := "priority desc"
