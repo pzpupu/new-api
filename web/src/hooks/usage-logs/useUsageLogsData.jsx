@@ -477,7 +477,7 @@ export const useLogsData = () => {
       if (other?.request_id) {
         expandDataLocal.push({
           key: t('请求记录'),
-          value: `https://cn-open-sota.tos-cn-shanghai.volces.com/newapi_logs/${other.request_id}.json`,
+          value: `tos://cn-open-sota/newapi_logs/${other.request_id}.json`,
         });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
