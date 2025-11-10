@@ -99,6 +99,24 @@ func readRequestBody(c *gin.Context) string {
 	return string(bodyBytes)
 }
 
+// normalizeJsonString 将 JSON 字符串解析后重新序列化，去除 Unicode 转义
+func normalizeJsonString(jsonStr string) interface{} {
+	if jsonStr == "" {
+		return ""
+	}
+
+	// 尝试解析为 JSON 对象
+	var jsonObj interface{}
+	err := common.Unmarshal([]byte(jsonStr), &jsonObj)
+	if err != nil {
+		// 如果解析失败，返回原始字符串
+		return jsonStr
+	}
+
+	// 返回解析后的对象，让外层 Marshal 处理
+	return jsonObj
+}
+
 func TosLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if nil != client &&
@@ -134,11 +152,19 @@ func TosLogger() gin.HandlerFunc {
 
 			// 记录完整响应体内容（包括流式响应的所有片段）
 			responseBody := bodyWriter.body.String()
-			content["response"] = responseBody
+			if !isStreaming {
+				// 将 JSON 字符串解析为对象，去除 Unicode 转义
+				content["response"] = normalizeJsonString(responseBody)
+			} else {
+				content["response"] = responseBody
+			}
 
 			content["errors"] = c.Errors.Errors()
 
-			path := prefix + "/" + content["request_id"].(string) + ".json"
+			requestId := content["request_id"].(string)
+			// 20251110 修改为按天存储
+			requestIdDate := requestId[:8]
+			path := prefix + "/" + requestIdDate + "/" + requestId + ".json"
 
 			gopool.Go(func() {
 				output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
