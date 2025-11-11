@@ -477,7 +477,7 @@ export const useLogsData = () => {
       if (other?.request_id) {
         expandDataLocal.push({
           key: t('请求记录'),
-          value: `tos://cc-data-dump/newapi_logs/${other.request_id}.json`,
+          value: `tos://cc-data-dump/newapi_logs/${other.request_id.slice(0, 8)}/${other.request_id}.json`,
         });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
