@@ -22,6 +22,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/mistral"
 	"github.com/QuantumNous/new-api/relay/channel/mokaai"
 	"github.com/QuantumNous/new-api/relay/channel/moonshot"
+	nexcc "github.com/QuantumNous/new-api/relay/channel/nex_cc"
 	"github.com/QuantumNous/new-api/relay/channel/ollama"
 	"github.com/QuantumNous/new-api/relay/channel/openai"
 	"github.com/QuantumNous/new-api/relay/channel/palm"
@@ -117,6 +118,8 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &minimax.Adaptor{}
 	case constant.APITypeReplicate:
 		return &replicate.Adaptor{}
+	case constant.APITypeClaudeCode:
+		return &nexcc.Adaptor{}
 	}
 	return nil
 }
