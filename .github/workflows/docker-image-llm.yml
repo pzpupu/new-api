@@ -12,7 +12,7 @@ env:
   NEW_REGISTRY: bp-docker-io-cn-shanghai.cr.volces.com
   NAMESPACE: pzpupu
   IMAGE_NAME: new-api
-  FEISHU_WEBHOOK_URL: https://open.feishu.cn/open-apis/bot/v2/hook/cc566636-11ec-4d15-90f7-112765cd1aba
+  FEISHU_WEBHOOK_URL: https://open.feishu.cn/open-apis/bot/v2/hook/1d25e7af-80fa-4feb-859d-8f690e0f1e3c
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
