@@ -49,8 +49,8 @@ jobs:
           echo "${{ secrets.KUBECONFIG_YAML }}" > kubeconfig
       - name: Deploy NewApi Master Service with new image
         run: |
-          old_image="${{ needs.build-and-push.outputs.image }}"
-          new_image="${old_image/${{ env.REGISTRY }}/${{ env.NEW_REGISTRY }}}"
+          VERSION=${GITHUB_REF#refs/tags/}
+          new_image="${{ env.NEW_REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${VERSION}"
           echo "Using tag: $new_image"
           KUBECONFIG=./kubeconfig kubectl set image deployment/new-api-master new-api-master=$new_image -n llm-proxy
       - name: Wait for Master deployments to be ready
@@ -82,8 +82,8 @@ jobs:
           echo "Master deployments are ready"
       - name: Deploy NewApi Slave Service with new image
         run: |
-          old_image="${{ needs.build-and-push.outputs.image }}"
-          new_image="${old_image/${{ env.REGISTRY }}/${{ env.NEW_REGISTRY }}}"
+          VERSION=${GITHUB_REF#refs/tags/}
+          new_image="${{ env.NEW_REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${VERSION}"
           echo "Using tag: $new_image"
           KUBECONFIG=./kubeconfig kubectl set image deployment/new-api-slave new-api-slave=$new_image -n llm-proxy
       - name: Wait for Master deployments to be ready
