@@ -11,69 +11,117 @@ env:
   REGISTRY: docker.io
   NEW_REGISTRY: bp-docker-io-cn-shanghai.cr.volces.com
   NAMESPACE: pzpupu
-
+  IMAGE_NAME: new-api
+  FEISHU_WEBHOOK_URL: https://open.feishu.cn/open-apis/bot/v2/hook/cc566636-11ec-4d15-90f7-112765cd1aba
 jobs:
-  build_single_arch:
-    name: Build & push (${{ matrix.arch }}) [native]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            platform: linux/amd64
-            runner: ubuntu-latest
-    runs-on: ${{ matrix.runner }}
-
-    permissions:
-      packages: write
-      contents: read
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: prod
 
     steps:
-      - name: Check out (shallow)
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Resolve tag & write VERSION
-        run: |
-          git fetch --tags --force --depth=1
-          TAG=${GITHUB_REF#refs/tags/}
-          echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "$TAG" > VERSION
-          echo "Building tag: $TAG for ${{ matrix.arch }}"
-
-
-      - name: Normalize GHCR repository
-        run: echo "GHCR_REPOSITORY=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Extract metadata (labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.GHCR_REPOSITORY }}
-
-      - name: Build & push single-arch (to both registries)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.GHCR_REPOSITORY }}:${{ env.TAG }}
-            ${{ env.REGISTRY }}/${{ env.GHCR_REPOSITORY }}:${{ env.TAG }}-latest
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-          sbom: false
+      - name: Build and push Docker image
+        id: build_image
+        run: |
+          # 从GitHub release tag中提取版本号
+          VERSION=${GITHUB_REF#refs/tags/}
+          image="${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${VERSION}"
+          echo "Building image: $image"
+          docker build . --file Dockerfile --tag $image
+          docker push $image
+          echo "image=$image" >> $GITHUB_OUTPUT
+      - name: Output image info
+        run: |
+          echo "NewApi Image: ${{ steps.build_image.outputs.image }}"
+  deploy:
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up kubeconfig for Volcano Engine
+        run: |
+          echo "${{ secrets.KUBECONFIG_YAML }}" > kubeconfig
+      - name: Deploy NewApi Master Service with new image
+        run: |
+          old_image="${{ needs.build-and-push.outputs.image }}"
+          new_image="${old_image/${{ env.REGISTRY }}/${{ env.NEW_REGISTRY }}}"
+          echo "Using tag: $new_image"
+          KUBECONFIG=./kubeconfig kubectl set image deployment/new-api-master new-api-master=$new_image -n llm-proxy
+      - name: Wait for Master deployments to be ready
+        run: |
+          deployments=(
+            "new-api-master"
+          )
+          timeout=3600
+          start_time=$(date +%s)
+          for deployment in "${deployments[@]}"; do
+            echo "Checking deployment: $deployment"
+            while true; do
+              ready_replicas=$(KUBECONFIG=./kubeconfig kubectl get deployment $deployment -n llm-proxy -o jsonpath='{.status.readyReplicas}')
+              ready_replicas=${ready_replicas:-0}
+              total_replicas=$(KUBECONFIG=./kubeconfig kubectl get deployment $deployment -n llm-proxy -o jsonpath='{.status.replicas}')
+              if [ "$ready_replicas" = "$total_replicas" ] && [ "$total_replicas" != "0" ]; then
+                echo "Deployment $deployment is ready"
+                break
+              fi
+              current_time=$(date +%s)
+              elapsed=$((current_time - start_time))
+              if [ $elapsed -ge $timeout ]; then
+                echo "Timeout reached for deployment $deployment"
+                exit 1
+              fi
+              sleep 10
+            done
+          done
+          echo "Master deployments are ready"
+      - name: Deploy NewApi Slave Service with new image
+        run: |
+          old_image="${{ needs.build-and-push.outputs.image }}"
+          new_image="${old_image/${{ env.REGISTRY }}/${{ env.NEW_REGISTRY }}}"
+          echo "Using tag: $new_image"
+          KUBECONFIG=./kubeconfig kubectl set image deployment/new-api-slave new-api-slave=$new_image -n llm-proxy
+      - name: Wait for Master deployments to be ready
+        run: |
+          deployments=(
+            "new-api-slave"
+          )
+          timeout=3600
+          start_time=$(date +%s)
+          for deployment in "${deployments[@]}"; do
+            echo "Checking deployment: $deployment"
+            while true; do
+              ready_replicas=$(KUBECONFIG=./kubeconfig kubectl get deployment $deployment -n llm-proxy -o jsonpath='{.status.readyReplicas}')
+              ready_replicas=${ready_replicas:-0}
+              total_replicas=$(KUBECONFIG=./kubeconfig kubectl get deployment $deployment -n llm-proxy -o jsonpath='{.status.replicas}')
+              if [ "$ready_replicas" = "$total_replicas" ] && [ "$total_replicas" != "0" ]; then
+                echo "Deployment $deployment is ready"
+                break
+              fi
+              current_time=$(date +%s)
+              elapsed=$((current_time - start_time))
+              if [ $elapsed -ge $timeout ]; then
+                echo "Timeout reached for deployment $deployment"
+                exit 1
+              fi
+              sleep 10
+            done
+          done
+          echo "Slave deployments are ready"
+      - name: Send message to Feishu
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          MESSAGE="Deployment completed successfully. Release Version: ${VERSION}"
+          curl -X POST $FEISHU_WEBHOOK_URL \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "msg_type": "text",
+                  "content": {
+                    "text": "'"${MESSAGE}"'"
+                  }
+                }'
