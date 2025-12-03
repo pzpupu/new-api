@@ -3,7 +3,7 @@ name: Publish Docker image (LLM)
 on:
   push:
     tags:
-      - 'llm-*'
+      - 'llm-[0-9A-Za-z]*'
 
 jobs:
   build_single_arch:
