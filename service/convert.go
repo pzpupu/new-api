@@ -55,7 +55,7 @@ func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.Re
 	for _, claudeTool := range tools {
 		openAITool := dto.ToolCallRequest{
 			Type: "function",
-			Function: dto.FunctionRequest{
+			Function: &dto.FunctionRequest{
 				Name:        claudeTool.Name,
 				Description: claudeTool.Description,
 				Parameters:  claudeTool.InputSchema,
@@ -146,7 +146,7 @@ func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.Re
 					toolCall := dto.ToolCallRequest{
 						ID:   mediaMsg.Id,
 						Type: "function",
-						Function: dto.FunctionRequest{
+						Function: &dto.FunctionRequest{
 							Name:      mediaMsg.Name,
 							Arguments: toJSONString(mediaMsg.Input),
 						},
@@ -513,7 +513,7 @@ func GeminiToOpenAIRequest(geminiRequest *dto.GeminiChatRequest, info *relaycomm
 				toolCall := dto.ToolCallRequest{
 					ID:   fmt.Sprintf("call_%d", len(toolCalls)+1), // 生成唯一ID
 					Type: "function",
-					Function: dto.FunctionRequest{
+					Function: &dto.FunctionRequest{
 						Name:      part.FunctionCall.FunctionName,
 						Arguments: toJSONString(part.FunctionCall.Arguments),
 					},
@@ -581,7 +581,7 @@ func GeminiToOpenAIRequest(geminiRequest *dto.GeminiChatRequest, info *relaycomm
 					for _, function := range functionDeclarations {
 						openAITool := dto.ToolCallRequest{
 							Type: "function",
-							Function: dto.FunctionRequest{
+							Function: &dto.FunctionRequest{
 								Name:        function.Name,
 								Description: function.Description,
 								Parameters:  function.Parameters,

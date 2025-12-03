@@ -80,7 +80,12 @@ func openAIChatToOllamaChat(c *gin.Context, r *dto.GeneralOpenAIRequest) (*Ollam
 	if len(r.Tools) > 0 {
 		tools := make([]OllamaTool, 0, len(r.Tools))
 		for _, t := range r.Tools {
-			tools = append(tools, OllamaTool{Type: "function", Function: OllamaToolFunction{Name: t.Function.Name, Description: t.Function.Description, Parameters: t.Function.Parameters}})
+			if t.Function != nil {
+				tools = append(tools, OllamaTool{Type: "function", Function: OllamaToolFunction{Name: t.Function.Name, Description: t.Function.Description, Parameters: t.Function.Parameters}})
+			} else if t.Name != "" {
+				// 新格式 (Cursor format)
+				tools = append(tools, OllamaTool{Type: "function", Function: OllamaToolFunction{Name: t.Name, Description: t.Description, Parameters: t.InputSchema}})
+			}
 		}
 		chatReq.Tools = tools
 	}

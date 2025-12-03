@@ -297,6 +297,10 @@ func CovertOpenAI2Gemini(c *gin.Context, textRequest dto.GeneralOpenAIRequest, i
 		codeExecution := false
 		urlContext := false
 		for _, tool := range textRequest.Tools {
+			// 跳过没有 Function 的工具（新格式）
+			if tool.Function == nil {
+				continue
+			}
 			if tool.Function.Name == "googleSearch" {
 				googleSearch = true
 				continue
@@ -323,7 +327,7 @@ func CovertOpenAI2Gemini(c *gin.Context, textRequest dto.GeneralOpenAIRequest, i
 			// Clean the parameters before appending
 			cleanedParams := cleanFunctionParameters(tool.Function.Parameters)
 			tool.Function.Parameters = cleanedParams
-			functions = append(functions, tool.Function)
+			functions = append(functions, *tool.Function)
 		}
 		geminiTools := geminiRequest.GetTools()
 		if codeExecution {

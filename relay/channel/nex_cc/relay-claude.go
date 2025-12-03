@@ -86,24 +86,32 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 	for _, tool := range textRequest.Tools {
 		claudeTool := dto.Tool{}
 
-		// 从 Function 中提取
-		params, ok := tool.Function.Parameters.(map[string]any)
-		if !ok {
-			continue
-		}
-		claudeTool.Name = tool.Function.Name
-		claudeTool.Description = tool.Function.Description
-		claudeTool.InputSchema = make(map[string]interface{})
-		if params["type"] != nil {
-			claudeTool.InputSchema["type"] = params["type"].(string)
-		}
-		claudeTool.InputSchema["properties"] = params["properties"]
-		claudeTool.InputSchema["required"] = params["required"]
-		for s, a := range params {
-			if s == "type" || s == "properties" || s == "required" {
+		// 判断是新格式还是旧格式
+		if tool.Function == nil {
+			// 新格式：直接使用 name, description, input_schema (Cursor format)
+			claudeTool.Name = tool.Name
+			claudeTool.Description = tool.Description
+			claudeTool.InputSchema = tool.InputSchema
+		} else {
+			// 旧格式：从 Function 中提取
+			params, ok := tool.Function.Parameters.(map[string]any)
+			if !ok {
 				continue
 			}
-			claudeTool.InputSchema[s] = a
+			claudeTool.Name = tool.Function.Name
+			claudeTool.Description = tool.Function.Description
+			claudeTool.InputSchema = make(map[string]interface{})
+			if params["type"] != nil {
+				claudeTool.InputSchema["type"] = params["type"].(string)
+			}
+			claudeTool.InputSchema["properties"] = params["properties"]
+			claudeTool.InputSchema["required"] = params["required"]
+			for s, a := range params {
+				if s == "type" || s == "properties" || s == "required" {
+					continue
+				}
+				claudeTool.InputSchema[s] = a
+			}
 		}
 		claudeTools = append(claudeTools, &claudeTool)
 	}

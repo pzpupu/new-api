@@ -188,12 +188,23 @@ func (r *GeneralOpenAIRequest) GetTokenCountMeta() *types.TokenCountMeta {
 		openaiTools := r.Tools
 		for _, tool := range openaiTools {
 			tokenCountMeta.ToolsCount++
-			texts = append(texts, tool.Function.Name)
-			if tool.Function.Description != "" {
-				texts = append(texts, tool.Function.Description)
-			}
-			if tool.Function.Parameters != nil {
-				texts = append(texts, fmt.Sprintf("%v", tool.Function.Parameters))
+			if tool.Function != nil {
+				texts = append(texts, tool.Function.Name)
+				if tool.Function.Description != "" {
+					texts = append(texts, tool.Function.Description)
+				}
+				if tool.Function.Parameters != nil {
+					texts = append(texts, fmt.Sprintf("%v", tool.Function.Parameters))
+				}
+			} else if tool.Name != "" {
+				// 新格式 (Cursor/Claude format)
+				texts = append(texts, tool.Name)
+				if tool.Description != "" {
+					texts = append(texts, tool.Description)
+				}
+				if tool.InputSchema != nil {
+					texts = append(texts, fmt.Sprintf("%v", tool.InputSchema))
+				}
 			}
 		}
 		//toolTokens := CountTokenInput(countStr, request.Model)
@@ -236,10 +247,14 @@ func (r *GeneralOpenAIRequest) GetSystemRoleName() string {
 const CustomType = "custom"
 
 type ToolCallRequest struct {
-	ID       string          `json:"id,omitempty"`
-	Type     string          `json:"type"`
-	Function FunctionRequest `json:"function,omitempty"`
-	Custom   json.RawMessage `json:"custom,omitempty"`
+	ID       string           `json:"id,omitempty"`
+	Type     string           `json:"type,omitempty"`
+	Function *FunctionRequest `json:"function,omitempty"`
+	Custom   json.RawMessage  `json:"custom,omitempty"`
+	// 新格式字段 (Claude format) - 用于支持 Cursor
+	Name        string                 `json:"name,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	InputSchema map[string]interface{} `json:"input_schema,omitempty"`
 }
 
 type FunctionRequest struct {

@@ -76,11 +76,22 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 	claudeTools := make([]any, 0, len(textRequest.Tools))
 
 	for _, tool := range textRequest.Tools {
-		if params, ok := tool.Function.Parameters.(map[string]any); ok {
-			claudeTool := dto.Tool{
-				Name:        tool.Function.Name,
-				Description: tool.Function.Description,
+		claudeTool := dto.Tool{}
+
+		// 判断是新格式还是旧格式
+		if tool.Function == nil {
+			// 新格式：直接使用 name, description, input_schema (Cursor format)
+			claudeTool.Name = tool.Name
+			claudeTool.Description = tool.Description
+			claudeTool.InputSchema = tool.InputSchema
+		} else {
+			// 旧格式：从 Function 中提取
+			params, ok := tool.Function.Parameters.(map[string]any)
+			if !ok {
+				continue
 			}
+			claudeTool.Name = tool.Function.Name
+			claudeTool.Description = tool.Function.Description
 			claudeTool.InputSchema = make(map[string]interface{})
 			if params["type"] != nil {
 				claudeTool.InputSchema["type"] = params["type"].(string)
@@ -93,8 +104,8 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 				}
 				claudeTool.InputSchema[s] = a
 			}
-			claudeTools = append(claudeTools, &claudeTool)
 		}
+		claudeTools = append(claudeTools, &claudeTool)
 	}
 
 	// Web search tool
