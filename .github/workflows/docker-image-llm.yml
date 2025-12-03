@@ -46,7 +46,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: mp-bp-cn-shanghai.cr.volces.com
-          username: ${{ secrets.VOLCUSER }}
+          username: ${{ secrets.VOLC_USER }}
           password: ${{ secrets.VOLC_PWD }}
 
       - name: Extract metadata (labels)
