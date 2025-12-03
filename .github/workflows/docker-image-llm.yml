@@ -1,4 +1,4 @@
-name: Publish Docker image (GHCR)
+name: Publish Docker image (LLM)
 
 on:
   push:
