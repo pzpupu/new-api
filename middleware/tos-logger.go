@@ -138,8 +138,16 @@ func TosLogger() gin.HandlerFunc {
 			c.Next()
 
 			// === 请求后 - 记录数据 ===
-
 			content := make(map[string]interface{})
+			content["username"] = c.GetString("username")
+			content["user_id"] = c.GetInt("id")
+			content["group"] = c.GetString("group")
+			content["user_group"] = c.GetString("user_group")
+			content["token_name"] = c.GetString("token_name")
+			content["channel_id"] = c.GetInt("channel_id")
+			content["channel_name"] = c.GetString("channel_name")
+			content["original_model"] = c.GetString("original_model")
+			content["model_mapping"] = c.GetString("model_mapping")
 			content["request_id"] = c.GetString(common.RequestIdKey)
 			content["request_path"] = c.Request.URL.Path
 
