@@ -139,7 +139,8 @@ func TosLogger() gin.HandlerFunc {
 
 			// === 请求后 - 记录数据 ===
 			content := make(map[string]interface{})
-			content["username"] = c.GetString("username")
+			username := c.GetString("username")
+			content["username"] = username
 			content["user_id"] = c.GetInt("id")
 			content["group"] = c.GetString("group")
 			content["user_group"] = c.GetString("user_group")
@@ -172,7 +173,7 @@ func TosLogger() gin.HandlerFunc {
 			requestId := content["request_id"].(string)
 			// 20251110 修改为按天存储
 			requestIdDate := requestId[:8]
-			path := prefix + "/" + requestIdDate + "/" + requestId + ".json"
+			path := prefix + "/" + requestIdDate + "/" + username + "/" + requestId + ".json"
 
 			gopool.Go(func() {
 				output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
