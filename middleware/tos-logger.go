@@ -137,65 +137,68 @@ func TosLogger() gin.HandlerFunc {
 			// 执行请求处理
 			c.Next()
 
-			// === 请求后 - 记录数据 ===
-			content := make(map[string]interface{})
-			username := c.GetString("username")
-			content["username"] = username
-			content["user_id"] = c.GetInt("id")
-			content["group"] = c.GetString("group")
-			content["user_group"] = c.GetString("user_group")
-			content["token_name"] = c.GetString("token_name")
-			content["channel_id"] = c.GetInt("channel_id")
-			content["channel_name"] = c.GetString("channel_name")
-			content["original_model"] = c.GetString("original_model")
-			content["model_mapping"] = c.GetString("model_mapping")
-			content["request_id"] = c.GetString(common.RequestIdKey)
-			content["request_path"] = c.Request.URL.Path
+			// 只有在启用日志记录时才进行日志存储
+			if c.GetBool(common.TosLog) {
+				// === 请求后 - 记录数据 ===
+				content := make(map[string]interface{})
+				username := c.GetString("username")
+				content["username"] = username
+				content["user_id"] = c.GetInt("id")
+				content["group"] = c.GetString("group")
+				content["user_group"] = c.GetString("user_group")
+				content["token_name"] = c.GetString("token_name")
+				content["channel_id"] = c.GetInt("channel_id")
+				content["channel_name"] = c.GetString("channel_name")
+				content["original_model"] = c.GetString("original_model")
+				content["model_mapping"] = c.GetString("model_mapping")
+				content["request_id"] = c.GetString(common.RequestIdKey)
+				content["request_path"] = c.Request.URL.Path
 
-			contentType := c.Writer.Header().Get("Content-Type")
-			isStreaming := bodyWriter.writeCount > 1 || isStreamingContentType(contentType)
-			content["is_streaming"] = isStreaming
+				contentType := c.Writer.Header().Get("Content-Type")
+				isStreaming := bodyWriter.writeCount > 1 || isStreamingContentType(contentType)
+				content["is_streaming"] = isStreaming
 
-			requestBody := readRequestBody(c)
-			content["request"] = requestBody
+				requestBody := readRequestBody(c)
+				content["request"] = requestBody
 
-			// 记录完整响应体内容（包括流式响应的所有片段）
-			responseBody := bodyWriter.body.String()
-			if !isStreaming {
-				// 将 JSON 字符串解析为对象，去除 Unicode 转义
-				content["response"] = normalizeJsonString(responseBody)
-			} else {
-				content["response"] = responseBody
-			}
-
-			content["errors"] = c.Errors.Errors()
-
-			requestId := content["request_id"].(string)
-			// 20251110 修改为按天存储
-			requestIdDate := requestId[:8]
-			path := prefix + "/" + username + "/" + requestIdDate + "/" + requestId + ".json"
-
-			gopool.Go(func() {
-				output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
-					PutObjectBasicInput: tos.PutObjectBasicInput{
-						Bucket: bucketName,
-						Key:    path,
-					},
-					// Fix: Marshal now returns ([]byte, error); handle error first
-					Content: func() io.ReadCloser {
-						data, err := common.Marshal(content)
-						if err != nil {
-							logger.LogError(c, "Failed to marshal content: "+err.Error())
-							data = []byte("{}")
-						}
-						return io.NopCloser(bytes.NewReader(data))
-					}(),
-				})
-				if err != nil {
-					logger.LogError(c, "Failed to put object: "+err.Error())
+				// 记录完整响应体内容（包括流式响应的所有片段）
+				responseBody := bodyWriter.body.String()
+				if !isStreaming {
+					// 将 JSON 字符串解析为对象，去除 Unicode 转义
+					content["response"] = normalizeJsonString(responseBody)
+				} else {
+					content["response"] = responseBody
 				}
-				logger.LogInfo(c, fmt.Sprintf("TOS PutObjectV2 Request ID: %s, Path: %s", output.RequestID, path))
-			})
+
+				content["errors"] = c.Errors.Errors()
+
+				requestId := content["request_id"].(string)
+				// 20251110 修改为按天存储
+				requestIdDate := requestId[:8]
+				path := prefix + "/" + username + "/" + requestIdDate + "/" + requestId + ".json"
+
+				gopool.Go(func() {
+					output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
+						PutObjectBasicInput: tos.PutObjectBasicInput{
+							Bucket: bucketName,
+							Key:    path,
+						},
+						// Fix: Marshal now returns ([]byte, error); handle error first
+						Content: func() io.ReadCloser {
+							data, err := common.Marshal(content)
+							if err != nil {
+								logger.LogError(c, "Failed to marshal content: "+err.Error())
+								data = []byte("{}")
+							}
+							return io.NopCloser(bytes.NewReader(data))
+						}(),
+					})
+					if err != nil {
+						logger.LogError(c, "Failed to put object: "+err.Error())
+					}
+					logger.LogInfo(c, fmt.Sprintf("TOS PutObjectV2 Request ID: %s, Path: %s", output.RequestID, path))
+				})
+			}
 		} else {
 			// 执行请求处理
 			c.Next()

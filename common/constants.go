@@ -205,3 +205,7 @@ const (
 	TopUpStatusSuccess = "success"
 	TopUpStatusExpired = "expired"
 )
+
+const (
+	TosLog = "tos-log"
+)

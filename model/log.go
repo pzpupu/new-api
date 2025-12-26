@@ -100,6 +100,12 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	isStream bool, group string, other map[string]interface{}) {
 	logger.LogInfo(c, fmt.Sprintf("record error log: userId=%d, channelId=%d, modelName=%s, tokenName=%s, content=%s", userId, channelId, modelName, tokenName, content))
 	username := c.GetString("username")
+	requestId := c.GetString(common.RequestIdKey)
+	if requestId != "" {
+		other["request_id"] = requestId
+		// 标记TOS日志
+		c.Set(common.TosLog, true)
+	}
 	otherStr := common.MapToJsonStr(other)
 	// 判断是否需要记录 IP
 	needRecordIp := false
@@ -162,6 +168,8 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	requestId := c.GetString(common.RequestIdKey)
 	if requestId != "" {
 		params.Other["request_id"] = requestId
+		// 标记TOS日志
+		c.Set(common.TosLog, true)
 	}
 	otherStr := common.MapToJsonStr(params.Other)
 	// 判断是否需要记录 IP
