@@ -1,9 +1,9 @@
-name: Publish Docker image (GHCR)
+name: Publish Docker image (MP)
 
 on:
   push:
     tags:
-      - '*'
+      - 'mp-[0-9A-Za-z]*'
 
 jobs:
   build_single_arch:
