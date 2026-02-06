@@ -124,7 +124,8 @@ func TosLogger() gin.HandlerFunc {
 				strings.HasPrefix(c.Request.URL.Path, "/pg/chat/completions") ||
 				strings.HasPrefix(c.Request.URL.Path, "/v1/responses") ||
 				strings.HasPrefix(c.Request.URL.Path, "/v1/messages") ||
-				strings.HasPrefix(c.Request.URL.Path, "/v1beta/models")) {
+				strings.HasPrefix(c.Request.URL.Path, "/v1beta/models") ||
+				strings.HasPrefix(c.Request.URL.Path, "/v1/models")) {
 
 			// 创建自定义 ResponseWriter 来捕获响应（支持流式响应）
 			bodyWriter := &responseBodyWriter{
