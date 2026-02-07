@@ -592,7 +592,7 @@ func testAllChannels(notify bool, onlyAutoDisabled ...bool) error {
 		}()
 
 		for _, channel := range channels {
-			isChannelEnabled := channel.Status == common.ChannelStatusEnabled
+			isChannelEnabled := channel.Status == common.ChannelStatusAutoDisabled
 			tik := time.Now()
 			result := testChannel(channel, "", "")
 			tok := time.Now()
