@@ -6,19 +6,22 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-gonic/gin"
 	"github.com/volcengine/ve-tos-golang-sdk/v2/tos"
 )
 
 var client *tos.ClientV2
-var ctx = context.Background()
 var bucketName string
 var prefix = "newapi_logs"
+
+// safePathSegmentRegex 匹配不安全的路径字符（仅保留字母、数字、下划线、中横线、点、中文字符）
+var safePathSegmentRegex = regexp.MustCompile(`[^a-zA-Z0-9_\p{Han}\-.]`)
 
 func TosInit() {
 	var (
@@ -29,7 +32,10 @@ func TosInit() {
 		region   = os.Getenv("TOS_REGION")
 	)
 	bucketName = os.Getenv("TOS_BUCKET")
-	prefix = os.Getenv("TOS_PREFIX")
+	// Fix: 仅在环境变量非空时覆盖默认前缀
+	if p := os.Getenv("TOS_PREFIX"); p != "" {
+		prefix = p
+	}
 
 	// 初始化客户端
 	var err error
@@ -81,7 +87,7 @@ func isStreamingContentType(contentType string) bool {
 	return false
 }
 
-// readRequestBody 完整读取请求体内容
+// readRequestBody 完整读取请求体内容，并恢复请求体供后续处理使用
 func readRequestBody(c *gin.Context) string {
 	if c.Request.Body == nil {
 		return ""
@@ -117,6 +123,15 @@ func normalizeJsonString(jsonStr string) interface{} {
 	return jsonObj
 }
 
+// sanitizePathSegment 清理路径段中的不安全字符，仅保留字母、数字、下划线、中横线、点和中文字符
+func sanitizePathSegment(s string) string {
+	sanitized := safePathSegmentRegex.ReplaceAllString(s, "")
+	if sanitized == "" {
+		return "_default"
+	}
+	return sanitized
+}
+
 func TosLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if nil != client &&
@@ -126,6 +141,9 @@ func TosLogger() gin.HandlerFunc {
 				strings.HasPrefix(c.Request.URL.Path, "/v1/messages") ||
 				strings.HasPrefix(c.Request.URL.Path, "/v1beta/models") ||
 				strings.HasPrefix(c.Request.URL.Path, "/v1/models")) {
+
+			// Fix: 在 c.Next() 之前读取请求体，确保所有格式（包括 Claude 的 ShouldBindJSON）都能正确捕获
+			requestBody := readRequestBody(c)
 
 			// 创建自定义 ResponseWriter 来捕获响应（支持流式响应）
 			bodyWriter := &responseBodyWriter{
@@ -140,26 +158,34 @@ func TosLogger() gin.HandlerFunc {
 
 			// 只有在启用日志记录时才进行日志存储
 			if c.GetBool(common.TosLog) {
-				// === 请求后 - 记录数据 ===
-				content := make(map[string]interface{})
+				// === 请求后 - 从 context 中提取所有数据（此时 middleware 尚未返回，c 仍然有效）===
 				username := c.GetString("username")
+				tokenName := c.GetString("token_name")
+				requestId := c.GetString(common.RequestIdKey)
+
+				// 安全检查：requestId 必须至少 8 字符用于日期提取
+				if requestId == "" || len(requestId) < 8 {
+					return
+				}
+
+				content := make(map[string]interface{})
 				content["username"] = username
 				content["user_id"] = c.GetInt("id")
 				content["group"] = c.GetString("group")
 				content["user_group"] = c.GetString("user_group")
-				content["token_name"] = c.GetString("token_name")
+				content["token_name"] = tokenName
 				content["channel_id"] = c.GetInt("channel_id")
 				content["channel_name"] = c.GetString("channel_name")
 				content["original_model"] = c.GetString("original_model")
 				content["model_mapping"] = c.GetString("model_mapping")
-				content["request_id"] = c.GetString(common.RequestIdKey)
+				content["request_id"] = requestId
 				content["request_path"] = c.Request.URL.Path
 
 				contentType := c.Writer.Header().Get("Content-Type")
 				isStreaming := bodyWriter.writeCount > 1 || isStreamingContentType(contentType)
 				content["is_streaming"] = isStreaming
 
-				requestBody := readRequestBody(c)
+				// 使用在 c.Next() 之前捕获的请求体
 				content["request"] = requestBody
 
 				// 记录完整响应体内容（包括流式响应的所有片段）
@@ -173,37 +199,43 @@ func TosLogger() gin.HandlerFunc {
 
 				content["errors"] = c.Errors.Errors()
 
-				requestId := content["request_id"].(string)
-				// 20251110 修改为按天存储
+				// 构造存储路径：{prefix}/{username}/{date}/{sanitized_token_name}/{request_id}.json
 				requestIdDate := requestId[:8]
-				path := prefix + "/" + username + "/" + requestIdDate + "/" + requestId + ".json"
+				sanitizedTokenName := sanitizePathSegment(tokenName)
+				path := prefix + "/" + username + "/" + requestIdDate + "/" + sanitizedTokenName + "/" + requestId + ".json"
+
+				// Fix: 在 goroutine 之前完成 Marshal，避免在异步 goroutine 中使用已回收的 gin.Context
+				data, marshalErr := common.Marshal(content)
+				if marshalErr != nil {
+					common.SysError("Failed to marshal TOS content: " + marshalErr.Error())
+					data = []byte("{}")
+				}
 
 				gopool.Go(func() {
-					output, err := client.PutObjectV2(ctx, &tos.PutObjectV2Input{
+					// Fix: 使用带超时的 context，防止 TOS 不可用时 goroutine 无限阻塞
+					// 设置较长超时（2小时），避免网络波动导致上传失败
+					// 注意：TOS 完全不可用时，stuck goroutine 会持有 data 直到超时，可能累积内存
+					uploadCtx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
+					defer cancel()
+
+					output, uploadErr := client.PutObjectV2(uploadCtx, &tos.PutObjectV2Input{
 						PutObjectBasicInput: tos.PutObjectBasicInput{
 							Bucket: bucketName,
 							Key:    path,
 						},
-						// Fix: Marshal now returns ([]byte, error); handle error first
-						Content: func() io.ReadCloser {
-							data, err := common.Marshal(content)
-							if err != nil {
-								logger.LogError(c, "Failed to marshal content: "+err.Error())
-								data = []byte("{}")
-							}
-							return io.NopCloser(bytes.NewReader(data))
-						}(),
+						Content: io.NopCloser(bytes.NewReader(data)),
 					})
-					if err != nil {
-						logger.LogError(c, "Failed to put object: "+err.Error())
+					// Fix: 错误时 return，防止 output 为 nil 导致 panic
+					if uploadErr != nil {
+						common.SysError(fmt.Sprintf("Failed to put TOS object: %s, Path: %s", uploadErr.Error(), path))
+						return
 					}
-					logger.LogInfo(c, fmt.Sprintf("TOS PutObjectV2 Request ID: %s, Path: %s", output.RequestID, path))
+					common.SysLog(fmt.Sprintf("TOS upload success, RequestID: %s, Path: %s", output.RequestID, path))
 				})
 			}
 		} else {
 			// 执行请求处理
 			c.Next()
 		}
-
 	}
 }

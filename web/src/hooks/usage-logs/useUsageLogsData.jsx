@@ -40,6 +40,14 @@ import {
 import { ITEMS_PER_PAGE } from '../../constants';
 import { useTableCompactMode } from '../common/useTableCompactMode';
 
+// 清理路径段中的不安全字符，与后端 sanitizePathSegment 保持一致
+// 仅保留字母、数字、下划线、中横线、点和中文字符
+function sanitizePathSegment(s) {
+  if (!s) return '_default';
+  const sanitized = s.replace(/[^a-zA-Z0-9_\u4e00-\u9fff\u3400-\u4dbf\-.]/g, '');
+  return sanitized || '_default';
+}
+
 export const useLogsData = () => {
   const { t } = useTranslation();
 
@@ -497,7 +505,7 @@ export const useLogsData = () => {
       if (other?.request_id) {
         expandDataLocal.push({
           key: t('请求记录'),
-          value: `tos://cc-data-dump/newapi_logs/${logs[i].username}/${other.request_id.slice(0, 8)}/${other.request_id}.json`,
+          value: `tos://cc-data-dump/newapi_logs/${logs[i].username}/${other.request_id.slice(0, 8)}/${sanitizePathSegment(logs[i].token_name)}/${other.request_id}.json`,
         });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;
