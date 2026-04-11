@@ -503,9 +503,11 @@ export const useLogsData = () => {
         });
       }
       if (other?.request_id) {
+        const isErrorLog = logs[i].type === 5 || other?.tos_is_error === true; // LogTypeError or marked as error
+        const pathSuffix = isErrorLog ? `error/${other.request_id}.json` : `${other.request_id}.json`;
         expandDataLocal.push({
           key: t('请求记录'),
-          value: `tos://cc-data-dump/newapi_logs/${logs[i].username}/${other.request_id.slice(0, 8)}/${sanitizePathSegment(logs[i].token_name)}/${other.request_id}.json`,
+          value: `tos://cc-data-dump/newapi_logs/${logs[i].username}/${other.request_id.slice(0, 8)}/${sanitizePathSegment(logs[i].token_name)}/${pathSuffix}`,
         });
       }
       expandDatesLocal[logs[i].key] = expandDataLocal;

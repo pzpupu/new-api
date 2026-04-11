@@ -199,10 +199,18 @@ func TosLogger() gin.HandlerFunc {
 
 				content["errors"] = c.Errors.Errors()
 
-				// 构造存储路径：{prefix}/{username}/{date}/{sanitized_token_name}/{request_id}.json
+				// 构造存储路径：{prefix}/{username}/{date}/{sanitized_token_name}/[error/]{request_id}.json
 				requestIdDate := requestId[:8]
 				sanitizedTokenName := sanitizePathSegment(tokenName)
-				path := prefix + "/" + username + "/" + requestIdDate + "/" + sanitizedTokenName + "/" + requestId + ".json"
+				
+				// 判断是否为错误
+				isError := c.Writer.Status() >= 400 || len(c.Errors.Errors()) > 0 || c.GetBool("tos_is_error")
+				
+				path := prefix + "/" + username + "/" + requestIdDate + "/" + sanitizedTokenName + "/"
+				if isError {
+					path += "error/"
+				}
+				path += requestId + ".json"
 
 				// Fix: 在 goroutine 之前完成 Marshal，避免在异步 goroutine 中使用已回收的 gin.Context
 				data, marshalErr := common.Marshal(content)

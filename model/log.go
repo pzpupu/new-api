@@ -103,8 +103,10 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 	requestId := c.GetString(common.RequestIdKey)
 	if requestId != "" {
 		other["request_id"] = requestId
+		other["tos_is_error"] = true
 		// 标记TOS日志
 		c.Set(common.TosLog, true)
+		c.Set("tos_is_error", true) // 标记为错误日志
 	}
 	otherStr := common.MapToJsonStr(other)
 	// 判断是否需要记录 IP
@@ -170,6 +172,11 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		params.Other["request_id"] = requestId
 		// 标记TOS日志
 		c.Set(common.TosLog, true)
+		
+		isError := c.Writer.Status() >= 400 || len(c.Errors.Errors()) > 0 || c.GetBool("tos_is_error")
+		if isError {
+			params.Other["tos_is_error"] = true
+		}
 	}
 	otherStr := common.MapToJsonStr(params.Other)
 	// 判断是否需要记录 IP
