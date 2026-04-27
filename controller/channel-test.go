@@ -897,7 +897,7 @@ func testAllChannels(notify bool) error {
 		}()
 
 		for _, channel := range channels {
-			if channel.Status == common.ChannelStatusManuallyDisabled {
+			if channel.Status != common.ChannelStatusAutoDisabled {
 				continue
 			}
 			isChannelEnabled := channel.Status == common.ChannelStatusEnabled
