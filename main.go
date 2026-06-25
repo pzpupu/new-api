@@ -25,12 +25,13 @@ import (
 	"github.com/QuantumNous/new-api/service"
 	_ "github.com/QuantumNous/new-api/setting/performance_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
-
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/autotls"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/acme/autocert"
 
 	_ "net/http/pprof"
 )
@@ -205,10 +206,21 @@ func main() {
 	// Log startup success message
 	common.LogStartupSuccess(startTime, port)
 
-	err = server.Run(":" + port)
-	if err != nil {
-		common.FatalLog("failed to start HTTP server: " + err.Error())
+	domain := os.Getenv("DOMAIN")
+	if domain != "" {
+		m := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(domain),
+			Cache:      autocert.DirCache("/data/www/.cache"),
+		}
+		common.FatalLog(autotls.RunWithManager(server, &m))
+	} else {
+		err = server.Run(":" + port)
+		if err != nil {
+			common.FatalLog("failed to start HTTP server: " + err.Error())
+		}
 	}
+
 }
 
 func InjectUmamiAnalytics() {
