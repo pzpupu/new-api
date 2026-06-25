@@ -314,6 +314,21 @@ func GetAllUnFinishSyncTasks(limit int) []*Task {
 	return tasks
 }
 
+// HasUnfinishedSyncTasks reports whether at least one async (Suno/video) task is
+// still in progress. It is a cheap existence check (LIMIT 1) used to decide
+// whether the async_task_poll system task needs to run; when no task is pending
+// the scheduler skips creating a row entirely.
+func HasUnfinishedSyncTasks() bool {
+	var id int64
+	err := DB.Model(&Task{}).
+		Where("progress != ?", "100%").
+		Where("status != ?", TaskStatusFailure).
+		Where("status != ?", TaskStatusSuccess).
+		Limit(1).
+		Pluck("id", &id).Error
+	return err == nil && id != 0
+}
+
 func GetByOnlyTaskId(taskId string) (*Task, bool, error) {
 	if taskId == "" {
 		return nil, false, nil
@@ -414,6 +429,17 @@ func (t *Task) UpdateWithStatus(fromStatus TaskStatus) (bool, error) {
 		return false, result.Error
 	}
 	return result.RowsAffected > 0, nil
+}
+
+// TaskBulkUpdate performs an unconditional bulk UPDATE by upstream task_id strings.
+// Same caveats as TaskBulkUpdateByID — no CAS guard.
+func TaskBulkUpdate(taskIds []string, params map[string]any) error {
+	if len(taskIds) == 0 {
+		return nil
+	}
+	return DB.Model(&Task{}).
+		Where("task_id in (?)", taskIds).
+		Updates(params).Error
 }
 
 // TaskBulkUpdateByID performs an unconditional bulk UPDATE by primary key IDs.
