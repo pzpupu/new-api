@@ -74,14 +74,14 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 		}
 		if emailToUse == "" {
 			common.SysLog(fmt.Sprintf("user %d has no email, skip sending email", userId))
-			return nil
+			break
 		}
 		return sendEmailNotify(emailToUse, data)
 	case dto.NotifyTypeWebhook:
 		webhookURLStr := userSetting.WebhookUrl
 		if webhookURLStr == "" {
 			common.SysLog(fmt.Sprintf("user %d has no webhook url, skip sending webhook", userId))
-			return nil
+			break
 		}
 
 		// 获取 webhook secret
@@ -91,7 +91,7 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 		barkURL := userSetting.BarkUrl
 		if barkURL == "" {
 			common.SysLog(fmt.Sprintf("user %d has no bark url, skip sending bark", userId))
-			return nil
+			break
 		}
 		return sendBarkNotify(barkURL, data)
 	case dto.NotifyTypeGotify:
@@ -99,7 +99,7 @@ func NotifyUser(userId int, userEmail string, userSetting dto.UserSetting, data 
 		gotifyToken := userSetting.GotifyToken
 		if gotifyUrl == "" || gotifyToken == "" {
 			common.SysLog(fmt.Sprintf("user %d has no gotify url or token, skip sending gotify", userId))
-			return nil
+			break
 		}
 		return sendGotifyNotify(gotifyUrl, gotifyToken, userSetting.GotifyPriority, data)
 	}
