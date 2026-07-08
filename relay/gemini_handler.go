@@ -1,6 +1,7 @@
 package relay
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -162,7 +163,25 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 			}
 		}
 
-		logger.LogDebug(c, "Gemini request body: %s", jsonData)
+		expand := map[string]any{
+			"id":            c.GetInt("id"),
+			"username":      c.GetString("username"),
+			"user_group":    c.GetString("user_group"),
+			"channel_id":    c.GetInt("channel_id"),
+			"channel_name":  c.GetString("channel_name"),
+			"token_id":      c.GetInt("token_id"),
+			"token_name":    c.GetString("token_name"),
+			"group":         c.GetString("default"),
+			"prompt_tokens": c.GetInt("prompt_tokens"),
+			"is_stream":     c.GetBool("is_stream"),
+			"user_quota":    c.GetInt("user_quota"),
+		}
+		expandData, err := json.Marshal(expand)
+		if err != nil {
+			expandData = []byte("{}")
+		}
+
+		logger.LogInfo(c, fmt.Sprintf("gemini request body: %s, expand: %s", jsonData, expandData))
 
 		body, size, closer, err := relaycommon.NewOutboundJSONBody(jsonData)
 		if err != nil {
