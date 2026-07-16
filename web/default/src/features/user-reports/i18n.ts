@@ -53,6 +53,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': 'Full prompt',
     'Search user': 'Search user',
     'No users found': 'No users found',
+    'Previous day': 'Previous day',
+    'Next day': 'Next day',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)',
   },
   zhCN: {
     'Usage Summary': '使用总结',
@@ -86,6 +90,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': '完整提示词',
     'Search user': '搜索用户',
     'No users found': '未找到用户',
+    'Previous day': '前一天',
+    'Next day': '后一天',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      '最活跃 {{hour}}:00 · {{count}} 次（占全天 {{pct}}%）',
   },
   zhTW: {
     'Usage Summary': '使用總結',
@@ -119,6 +127,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': '完整提示詞',
     'Search user': '搜尋使用者',
     'No users found': '找不到使用者',
+    'Previous day': '前一天',
+    'Next day': '後一天',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      '最活躍 {{hour}}:00 · {{count}} 次（佔全天 {{pct}}%）',
   },
   ja: {
     'Usage Summary': '利用サマリー',
@@ -152,6 +164,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': 'プロンプト全文',
     'Search user': 'ユーザーを検索',
     'No users found': 'ユーザーが見つかりません',
+    'Previous day': '前日',
+    'Next day': '翌日',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      '最も活発 {{hour}}:00 · {{count}} 件（全体の {{pct}}%）',
   },
   ru: {
     'Usage Summary': 'Сводка использования',
@@ -185,6 +201,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': 'Полный запрос',
     'Search user': 'Поиск пользователя',
     'No users found': 'Пользователи не найдены',
+    'Previous day': 'Предыдущий день',
+    'Next day': 'Следующий день',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      'Пик активности {{hour}}:00 · {{count}} ({{pct}}% за день)',
   },
   fr: {
     'Usage Summary': "Résumé d'utilisation",
@@ -219,6 +239,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': 'Prompt complet',
     'Search user': 'Rechercher un utilisateur',
     'No users found': 'Aucun utilisateur trouvé',
+    'Previous day': 'Jour précédent',
+    'Next day': 'Jour suivant',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      'Le plus actif {{hour}}:00 · {{count}} ({{pct}} % de la journée)',
   },
   vi: {
     'Usage Summary': 'Tóm tắt sử dụng',
@@ -252,6 +276,10 @@ const resources: Record<string, Record<string, string>> = {
     'Full prompt': 'Prompt đầy đủ',
     'Search user': 'Tìm người dùng',
     'No users found': 'Không tìm thấy người dùng',
+    'Previous day': 'Ngày trước',
+    'Next day': 'Ngày sau',
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)':
+      'Hoạt động nhiều nhất {{hour}}:00 · {{count}} ({{pct}}% trong ngày)',
   },
 }
 

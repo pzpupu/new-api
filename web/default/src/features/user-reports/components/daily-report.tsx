@@ -33,6 +33,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { formatQuotaWithCurrency } from '@/lib/currency'
 import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
@@ -265,54 +271,76 @@ function ModelBars({
 
 function HourlyRhythm({
   distribution,
-  label,
-  peakLabel,
 }: {
   distribution: Record<string, number>
-  label: string
-  peakLabel: string
 }) {
+  const { t } = useTranslation()
   const hours = Array.from({ length: 24 }, (_, hour) => {
     const key = String(hour).padStart(2, '0')
     return { hour, count: distribution[key] ?? distribution[String(hour)] ?? 0 }
   })
   const max = Math.max(1, ...hours.map((entry) => entry.count))
+  const total = hours.reduce((sum, entry) => sum + entry.count, 0)
   const peak = hours.reduce((best, entry) =>
     entry.count > best.count ? entry : best
   )
   const peakHour = String(peak.hour).padStart(2, '0')
+  const peakShare = total > 0 ? Math.round((peak.count / total) * 100) : 0
+  // 结论句同时用于底部文案与柱状图的无障碍描述。
+  const summary = t(
+    'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)',
+    { hour: peakHour, count: formatInt(peak.count), pct: peakShare }
+  )
   return (
     <div>
       {/* role=img + aria-label 让屏幕阅读器把柱状图作为一张有描述的图读出 */}
-      <div
-        className='flex h-28 items-end gap-[3px]'
-        role='img'
-        aria-label={`${label}: ${peakLabel} ${peakHour}:00 · ${formatInt(peak.count)}`}
-      >
-        {hours.map(({ hour, count }) => {
-          const isPeak = count > 0 && hour === peak.hour
-          let barColor = 'bg-primary/30'
-          if (count === 0) barColor = 'bg-muted'
-          else if (isPeak) barColor = 'bg-primary'
-          return (
-            <div
-              key={hour}
-              className='flex h-full flex-1 flex-col justify-end'
-              title={`${String(hour).padStart(2, '0')}:00 · ${count}`}
-            >
-              <div
-                className={cn(
-                  'w-full rounded-sm transition-[height]',
-                  barColor
-                )}
-                style={{
-                  height: `${count === 0 ? 2 : Math.max(6, (count / max) * 100)}%`,
-                }}
-              />
-            </div>
-          )
-        })}
-      </div>
+      <TooltipProvider delay={0}>
+        <div
+          className='flex h-28 items-end gap-[3px]'
+          role='img'
+          aria-label={summary}
+        >
+          {hours.map(({ hour, count }) => {
+            // 颜色按繁忙程度（count/max）分档：日节奏一眼可读，不必逐根比高度。
+            const ratio = count / max
+            let barColor = 'bg-primary'
+            if (count === 0) barColor = 'bg-muted'
+            else if (ratio <= 0.2) barColor = 'bg-primary/25'
+            else if (ratio <= 0.4) barColor = 'bg-primary/40'
+            else if (ratio <= 0.6) barColor = 'bg-primary/60'
+            else if (ratio <= 0.8) barColor = 'bg-primary/80'
+            const share = total > 0 ? Math.round((count / total) * 100) : 0
+            const hourLabel = String(hour).padStart(2, '0')
+            return (
+              <Tooltip key={hour}>
+                {/* 整列作为悬浮热区：短柱上方的空白也能触发提示 */}
+                <TooltipTrigger
+                  render={
+                    <div className='flex h-full flex-1 cursor-default flex-col justify-end'>
+                      <div
+                        className={cn(
+                          'w-full rounded-sm transition-[height]',
+                          barColor
+                        )}
+                        style={{
+                          height: `${count === 0 ? 2 : Math.max(6, ratio * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  }
+                />
+                <TooltipContent side='top'>
+                  <span className='tabular-nums'>
+                    <span className='font-medium'>{hourLabel}:00</span> ·{' '}
+                    {formatInt(count)} {t('Requests')}
+                    {count > 0 && total > 0 && ` · ${share}%`}
+                  </span>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+        </div>
+      </TooltipProvider>
       <div className='text-muted-foreground mt-1.5 flex justify-between text-[11px] tabular-nums'>
         <span>00</span>
         <span>06</span>
@@ -320,9 +348,7 @@ function HourlyRhythm({
         <span>18</span>
         <span>23</span>
       </div>
-      <div className='text-muted-foreground mt-1 text-xs'>
-        {peakLabel} {peakHour}:00 · {formatInt(peak.count)}
-      </div>
+      <div className='text-muted-foreground mt-1 text-xs'>{summary}</div>
     </div>
   )
 }
@@ -599,7 +625,7 @@ export function DailyReport({ data }: { data: DailySummary }) {
               {bullets.map((bullet) => (
                 <li
                   key={bullet}
-                  className='text-foreground/90 before:text-primary relative pl-4 text-sm leading-relaxed before:absolute before:left-0 before:content-["▸"]'
+                  className='text-foreground/90 before:bg-primary relative pl-4 text-sm leading-relaxed before:absolute before:top-2 before:left-0 before:size-1.5 before:rounded-full before:content-[""]'
                 >
                   {bullet}
                 </li>
@@ -612,11 +638,7 @@ export function DailyReport({ data }: { data: DailySummary }) {
       {/* Hourly rhythm — signature timeline */}
       {data.hourly_distribution != null && (
         <SectionCard title={t('Activity by hour')}>
-          <HourlyRhythm
-            distribution={data.hourly_distribution}
-            label={t('Activity by hour')}
-            peakLabel={t('Peak')}
-          />
+          <HourlyRhythm distribution={data.hourly_distribution} />
         </SectionCard>
       )}
 

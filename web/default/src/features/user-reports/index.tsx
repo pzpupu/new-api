@@ -18,8 +18,8 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
-import { RefreshCw } from 'lucide-react'
-import { useMemo, type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
@@ -153,6 +153,48 @@ export function UserReports() {
     }
   }
 
+  // 相邻日期步进：dates 已按日期倒序（最新在前），下标越大日期越旧。
+  const dateIndex = effectiveDate != null ? dates.indexOf(effectiveDate) : -1
+  const olderDate = dateIndex >= 0 ? dates[dateIndex + 1] : undefined
+  const newerDate = dateIndex > 0 ? dates[dateIndex - 1] : undefined
+  const goToDate = useCallback(
+    (nextDate?: string) => {
+      if (nextDate == null) return
+      navigate({ search: (prev) => ({ ...prev, date: nextDate }) })
+    },
+    [navigate]
+  )
+
+  // 键盘 ← / → 快速翻天；输入框、下拉、弹窗聚焦时不拦截，避免抢占方向键。
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return
+      }
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+      const el = document.activeElement as HTMLElement | null
+      if (
+        el != null &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.isContentEditable ||
+          el.getAttribute('role') === 'combobox' ||
+          el.closest('[role="listbox"],[role="dialog"]') != null)
+      ) {
+        return
+      }
+      if (event.key === 'ArrowLeft' && olderDate != null) {
+        event.preventDefault()
+        goToDate(olderDate)
+      } else if (event.key === 'ArrowRight' && newerDate != null) {
+        event.preventDefault()
+        goToDate(newerDate)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [olderDate, newerDate, goToDate])
+
   let body: ReactNode
   if (listQuery.isLoading) {
     body = <ReportSkeleton />
@@ -232,25 +274,47 @@ export function UserReports() {
           </Select>
         )}
         {dates.length > 0 && (
-          <Select
-            value={effectiveDate ?? ''}
-            onValueChange={(value) =>
-              navigate({
-                search: (prev) => ({ ...prev, date: value ?? undefined }),
-              })
-            }
-          >
-            <SelectTrigger className='h-8 w-40'>
-              <SelectValue placeholder={t('Select date')} />
-            </SelectTrigger>
-            <SelectContent>
-              {dates.map((date) => (
-                <SelectItem key={date} value={date}>
-                  {date}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className='flex items-center gap-1'>
+            <Button
+              variant='outline'
+              size='icon'
+              disabled={olderDate == null}
+              onClick={() => goToDate(olderDate)}
+              aria-label={t('Previous day')}
+              title={t('Previous day')}
+            >
+              <ChevronLeft />
+            </Button>
+            <Select
+              value={effectiveDate ?? ''}
+              onValueChange={(value) =>
+                navigate({
+                  search: (prev) => ({ ...prev, date: value ?? undefined }),
+                })
+              }
+            >
+              <SelectTrigger className='h-8 w-40'>
+                <SelectValue placeholder={t('Select date')} />
+              </SelectTrigger>
+              <SelectContent>
+                {dates.map((date) => (
+                  <SelectItem key={date} value={date}>
+                    {date}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant='outline'
+              size='icon'
+              disabled={newerDate == null}
+              onClick={() => goToDate(newerDate)}
+              aria-label={t('Next day')}
+              title={t('Next day')}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
         )}
         <Button
           variant='outline'
