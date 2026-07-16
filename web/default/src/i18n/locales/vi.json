@@ -5126,6 +5126,7 @@
     "analyzed": "đã phân tích",
     "Logs analyzed": "Nhật ký đã phân tích",
     "Data scanned": "Dữ liệu đã quét",
-    "Summary channel": "Kênh tóm tắt"
+    "Summary channel": "Kênh tóm tắt",
+    "Admin only": "Chỉ quản trị viên"
   }
 }

@@ -648,7 +648,10 @@ export function DailyReport({ data }: { data: DailySummary }) {
 
       {/* Metadata footer — admin only */}
       {isAdmin && (
-        <SectionCard title={t('Details')}>
+        <SectionCard
+          title={t('Details')}
+          aside={<Chip>{t('Admin only')}</Chip>}
+        >
           <div className='text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-xs'>
             {typeof meta.consume_log_count === 'number' && (
               <span>

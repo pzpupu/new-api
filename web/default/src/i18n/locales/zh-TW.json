@@ -5126,6 +5126,7 @@
     "analyzed": "已分析",
     "Logs analyzed": "已分析日誌",
     "Data scanned": "掃描資料量",
-    "Summary channel": "總結渠道"
+    "Summary channel": "總結渠道",
+    "Admin only": "僅管理員可見"
   }
 }

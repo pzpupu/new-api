@@ -5126,6 +5126,7 @@
     "analyzed": "проанализировано",
     "Logs analyzed": "Проанализировано логов",
     "Data scanned": "Просканировано данных",
-    "Summary channel": "Канал сводки"
+    "Summary channel": "Канал сводки",
+    "Admin only": "Только для админов"
   }
 }

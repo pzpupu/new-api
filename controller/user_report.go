@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -81,9 +82,31 @@ func getUserReportContent(c *gin.Context, userId int) {
 		common.ApiError(c, err)
 		return
 	}
+	// 「详情」中的 metadata 仅管理员可见：非管理员剥离该字段，避免经接口泄露。
+	if c.GetInt("role") < common.RoleAdminUser {
+		content = stripReportMetadata(content)
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    content,
 	})
+}
+
+// stripReportMetadata 从报告 JSON 中移除仅管理员可见的 metadata 字段；
+// 解析失败或不含该字段时原样返回。
+func stripReportMetadata(raw json.RawMessage) json.RawMessage {
+	var obj map[string]json.RawMessage
+	if err := common.Unmarshal(raw, &obj); err != nil {
+		return raw
+	}
+	if _, ok := obj["metadata"]; !ok {
+		return raw
+	}
+	delete(obj, "metadata")
+	stripped, err := common.Marshal(obj)
+	if err != nil {
+		return raw
+	}
+	return json.RawMessage(stripped)
 }
