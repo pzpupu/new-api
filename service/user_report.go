@@ -76,7 +76,9 @@ func initUserReportClient() {
 
 // UserReportEntry 描述一份可用的报告（列表项），不含正文。
 type UserReportEntry struct {
-	TokenId      int    `json:"token_id"`
+	TokenId int `json:"token_id"`
+	// TokenName 由 controller 从 Token 模型解析填充（已删除的 token 留空）。
+	TokenName    string `json:"token_name"`
 	Date         string `json:"date"`
 	Key          string `json:"key"`
 	Size         int64  `json:"size"`

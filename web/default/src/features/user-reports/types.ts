@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 export interface UserReportEntry {
   token_id: number
+  token_name?: string
   date: string
   key: string
   size: number

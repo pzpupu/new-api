@@ -17,11 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
+import { getRouteApi } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -33,8 +35,11 @@ import {
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
 
+import './i18n'
 import { getUserReport, listUserReports } from './api'
 import { ReportViewer } from './components/report-viewer'
+
+const route = getRouteApi('/_authenticated/user-reports/')
 
 function CenterState({ children }: { children: ReactNode }) {
   return (
@@ -44,42 +49,69 @@ function CenterState({ children }: { children: ReactNode }) {
   )
 }
 
+function ErrorState({
+  message,
+  retryLabel,
+  onRetry,
+}: {
+  message: string
+  retryLabel: string
+  onRetry: () => void
+}) {
+  return (
+    <div className='flex h-full min-h-40 flex-col items-center justify-center gap-3 text-sm'>
+      <span className='text-muted-foreground'>{message}</span>
+      <Button variant='outline' size='sm' onClick={onRetry}>
+        {retryLabel}
+      </Button>
+    </div>
+  )
+}
+
 export function UserReports() {
   const { t } = useTranslation()
+  const navigate = route.useNavigate()
+  const search = route.useSearch()
   const role = useAuthStore((s) => s.auth.user?.role) ?? 0
   const isAdmin = role >= ROLE.ADMIN
 
-  // 管理员可输入 user_id 查看他人；为空则查看自己。
-  const [targetUserId, setTargetUserId] = useState<number | undefined>(
-    undefined
-  )
-  const [userIdInput, setUserIdInput] = useState('')
-  const [selectedTokenId, setSelectedTokenId] = useState<number | undefined>(
-    undefined
-  )
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(
-    undefined
+  // 选中项持久化在 URL：token / date，以及管理员的目标 user。
+  const targetUserId = isAdmin ? search.user : undefined
+  const [userIdInput, setUserIdInput] = useState(() =>
+    search.user != null ? String(search.user) : ''
   )
 
   const listQuery = useQuery({
     queryKey: ['user-reports', 'list', targetUserId ?? 'self'],
     queryFn: () => listUserReports(targetUserId),
-    select: (res) => (res.success ? (res.data ?? []) : []),
     staleTime: 60_000,
   })
-  const entries = useMemo(() => listQuery.data ?? [], [listQuery.data])
+  const listEnvelope = listQuery.data
+  const entries = useMemo(
+    () => (listEnvelope?.success ? (listEnvelope.data ?? []) : []),
+    [listEnvelope]
+  )
+  const listErrored = listQuery.isError || listEnvelope?.success === false
 
-  const tokenIds = useMemo(() => {
-    const set = new Set<number>()
-    entries.forEach((entry) => set.add(entry.token_id))
-    return [...set].sort((a, b) => a - b)
+  // 每个 token 取一个名称（列表里同一 token 的名称一致）。
+  const tokens = useMemo(() => {
+    const nameById = new Map<number, string>()
+    entries.forEach((entry) => {
+      if (!nameById.has(entry.token_id)) {
+        nameById.set(entry.token_id, entry.token_name ?? '')
+      }
+    })
+    return [...nameById.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.id - b.id)
   }, [entries])
 
-  // 纯派生当前选中项：未选或选中项已失效时回退到最新，避免额外的 effect。
+  // 纯派生当前选中项：未选或已失效时回退到最新，避免额外的 effect。
   const effectiveTokenId =
-    selectedTokenId != null && tokenIds.includes(selectedTokenId)
-      ? selectedTokenId
-      : tokenIds[0]
+    search.token != null && tokens.some((token) => token.id === search.token)
+      ? search.token
+      : tokens[0]?.id
+  const selectedToken = tokens.find((token) => token.id === effectiveTokenId)
 
   const dates = useMemo(
     () =>
@@ -89,9 +121,7 @@ export function UserReports() {
     [entries, effectiveTokenId]
   )
   const effectiveDate =
-    selectedDate != null && dates.includes(selectedDate)
-      ? selectedDate
-      : dates[0]
+    search.date != null && dates.includes(search.date) ? search.date : dates[0]
 
   const contentQuery = useQuery({
     queryKey: [
@@ -108,18 +138,23 @@ export function UserReports() {
         date: effectiveDate as string,
       }),
     enabled: effectiveTokenId != null && effectiveDate != null,
-    select: (res) => (res.success ? (res.data ?? null) : null),
     staleTime: 60_000,
   })
+  const contentEnvelope = contentQuery.data
+  const content = contentEnvelope?.success
+    ? (contentEnvelope.data ?? null)
+    : null
+  const contentErrored =
+    contentQuery.isError || contentEnvelope?.success === false
 
   const commitUserId = () => {
     const trimmed = userIdInput.trim()
     const parsed = Number(trimmed)
-    setTargetUserId(
+    const user =
       trimmed && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
-    )
-    setSelectedTokenId(undefined)
-    setSelectedDate(undefined)
+    navigate({
+      search: (prev) => ({ ...prev, user, token: undefined, date: undefined }),
+    })
   }
 
   const loadingState = (
@@ -132,14 +167,30 @@ export function UserReports() {
   let body: ReactNode
   if (listQuery.isLoading) {
     body = loadingState
+  } else if (listErrored) {
+    body = (
+      <ErrorState
+        message={t('Failed to load reports')}
+        retryLabel={t('Retry')}
+        onRetry={() => listQuery.refetch()}
+      />
+    )
   } else if (entries.length === 0) {
     body = <CenterState>{t('No reports found')}</CenterState>
   } else if (contentQuery.isLoading) {
     body = loadingState
-  } else if (contentQuery.data == null) {
+  } else if (contentErrored) {
+    body = (
+      <ErrorState
+        message={t('Failed to load report')}
+        retryLabel={t('Retry')}
+        onRetry={() => contentQuery.refetch()}
+      />
+    )
+  } else if (content == null) {
     body = <CenterState>{t('No report for the selected date')}</CenterState>
   } else {
-    body = <ReportViewer content={contentQuery.data} />
+    body = <ReportViewer content={content} />
   }
 
   return (
@@ -159,22 +210,30 @@ export function UserReports() {
             className='h-8 w-36'
           />
         )}
-        {tokenIds.length > 0 && (
+        {tokens.length > 0 && (
           <Select
             value={effectiveTokenId != null ? String(effectiveTokenId) : ''}
             onValueChange={(value) => {
               if (value == null) return
-              setSelectedTokenId(Number(value))
-              setSelectedDate(undefined)
+              navigate({
+                search: (prev) => ({
+                  ...prev,
+                  token: Number(value),
+                  date: undefined,
+                }),
+              })
             }}
           >
-            <SelectTrigger className='h-8 w-40'>
-              <SelectValue placeholder={t('Select token')} />
+            <SelectTrigger className='h-8 w-48'>
+              <SelectValue placeholder={t('Select token')}>
+                {selectedToken &&
+                  (selectedToken.name || `Token #${selectedToken.id}`)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {tokenIds.map((id) => (
-                <SelectItem key={id} value={String(id)}>
-                  {`Token #${id}`}
+              {tokens.map((token) => (
+                <SelectItem key={token.id} value={String(token.id)}>
+                  {token.name || `Token #${token.id}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -183,7 +242,11 @@ export function UserReports() {
         {dates.length > 0 && (
           <Select
             value={effectiveDate ?? ''}
-            onValueChange={(value) => setSelectedDate(value ?? undefined)}
+            onValueChange={(value) =>
+              navigate({
+                search: (prev) => ({ ...prev, date: value ?? undefined }),
+              })
+            }
           >
             <SelectTrigger className='h-8 w-40'>
               <SelectValue placeholder={t('Select date')} />

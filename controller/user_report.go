@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
@@ -39,6 +40,24 @@ func listUserReports(c *gin.Context, userId int) {
 	if err != nil {
 		common.ApiError(c, err)
 		return
+	}
+	// 用 token 名称丰富列表，让前端选择器展示名称而非纯 id。
+	// 复用既有的 model.GetTokenByIds 逐个解析（用户 token 数量少，无需批量查询）。
+	nameByTokenId := make(map[int]string)
+	for _, entry := range entries {
+		if _, seen := nameByTokenId[entry.TokenId]; seen {
+			continue
+		}
+		name := ""
+		if token, tokenErr := model.GetTokenByIds(entry.TokenId, userId); tokenErr == nil {
+			name = token.Name
+		}
+		nameByTokenId[entry.TokenId] = name
+	}
+	for i := range entries {
+		if name := nameByTokenId[entries[i].TokenId]; name != "" {
+			entries[i].TokenName = name
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

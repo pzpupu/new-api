@@ -299,12 +299,8 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
 
-		// 用户使用总结报告（只读拉取，报告由外部应用生成并写入 S3）
-		userReportRoute := apiRouter.Group("/user_report")
-		userReportRoute.GET("/self", middleware.UserAuth(), controller.GetUserReportsSelf)
-		userReportRoute.GET("/self/content", middleware.UserAuth(), controller.GetUserReportContentSelf)
-		userReportRoute.GET("", middleware.AdminAuth(), controller.GetUserReports)
-		userReportRoute.GET("/content", middleware.AdminAuth(), controller.GetUserReportContent)
+		// 用户使用总结报告（路由注册见 router/user_report.go）
+		registerUserReportRoutes(apiRouter)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{

@@ -17,9 +17,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { createFileRoute } from '@tanstack/react-router'
+import z from 'zod'
 
 import { UserReports } from '@/features/user-reports'
 
+// Persist the selected token / date (and admin target user) in the URL so the
+// view is refresh-safe, shareable, and works with browser back/forward.
+const userReportsSearchSchema = z.object({
+  token: z.number().optional().catch(undefined),
+  date: z.string().optional().catch(undefined),
+  user: z.number().optional().catch(undefined),
+})
+
 export const Route = createFileRoute('/_authenticated/user-reports/')({
+  validateSearch: userReportsSearchSchema,
   component: UserReports,
 })
