@@ -5103,6 +5103,13 @@
     "Zero retention": "Без хранения данных",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Usage Summary": "Сводка использования",
+    "Select token": "Выберите токен",
+    "No reports found": "Отчёты не найдены",
+    "No report for the selected date": "Нет отчёта за выбранную дату",
+    "User ID (admin)": "ID пользователя (админ)",
+    "AI Summary": "AI-сводка",
+    "Statistics": "Статистика"
   }
 }

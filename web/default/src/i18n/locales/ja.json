@@ -5103,6 +5103,13 @@
     "Zero retention": "データ保持なし",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V 4",
-    "Zoom": "ズーム"
+    "Zoom": "ズーム",
+    "Usage Summary": "利用サマリー",
+    "Select token": "トークンを選択",
+    "No reports found": "レポートがありません",
+    "No report for the selected date": "選択した日付のレポートはありません",
+    "User ID (admin)": "ユーザーID（管理者）",
+    "AI Summary": "AI サマリー",
+    "Statistics": "統計"
   }
 }

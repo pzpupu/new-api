@@ -5103,6 +5103,13 @@
     "Zero retention": "Không lưu dữ liệu",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Usage Summary": "Tóm tắt sử dụng",
+    "Select token": "Chọn token",
+    "No reports found": "Không tìm thấy báo cáo",
+    "No report for the selected date": "Không có báo cáo cho ngày đã chọn",
+    "User ID (admin)": "ID người dùng (quản trị)",
+    "AI Summary": "Tóm tắt AI",
+    "Statistics": "Thống kê"
   }
 }

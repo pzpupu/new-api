@@ -5103,6 +5103,13 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "Usage Summary": "使用总结",
+    "Select token": "选择令牌",
+    "No reports found": "暂无报告",
+    "No report for the selected date": "所选日期暂无报告",
+    "User ID (admin)": "用户 ID（管理员）",
+    "AI Summary": "AI 总结",
+    "Statistics": "统计数据"
   }
 }

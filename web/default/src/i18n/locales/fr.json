@@ -5103,6 +5103,13 @@
     "Zero retention": "Aucune rétention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Usage Summary": "Résumé d'utilisation",
+    "Select token": "Sélectionner un jeton",
+    "No reports found": "Aucun rapport trouvé",
+    "No report for the selected date": "Aucun rapport pour la date sélectionnée",
+    "User ID (admin)": "ID utilisateur (admin)",
+    "AI Summary": "Résumé IA",
+    "Statistics": "Statistiques"
   }
 }
