@@ -19,6 +19,13 @@ For commercial licensing, please contact support@quantumnous.com
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 // Known shape of report_type === 'user_daily_summary' (v1.x). All fields are
@@ -130,25 +137,27 @@ function formatDateTime(iso?: string): string {
 
 // ---- presentational primitives ---------------------------------------------
 
-function SectionHeading({
-  label,
+function SectionCard({
+  title,
   aside,
+  children,
 }: {
-  label: string
+  title: string
   aside?: ReactNode
+  children: ReactNode
 }) {
   return (
-    <div className='mb-3 flex items-center gap-3'>
-      <h3 className='text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase'>
-        {label}
-      </h3>
-      <div className='bg-border h-px flex-1' />
-      {aside != null && (
-        <span className='text-muted-foreground text-xs tabular-nums'>
-          {aside}
-        </span>
-      )}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className='text-sm font-semibold'>{title}</CardTitle>
+        {aside != null && (
+          <CardAction className='text-muted-foreground text-xs tabular-nums'>
+            {aside}
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   )
 }
 
@@ -176,31 +185,6 @@ function StatInline({ items }: { items: { label: string; value: string }[] }) {
 }
 
 // ---- sections ---------------------------------------------------------------
-
-function MetricStrip({ figures }: { figures: Figure[] }) {
-  return (
-    <div className='bg-border grid grid-cols-2 gap-px overflow-hidden rounded-xl border sm:grid-cols-3 lg:grid-cols-5'>
-      {figures.map((figure) => (
-        <div key={figure.label} className='bg-card px-4 py-3.5'>
-          <div className='text-muted-foreground text-[11px] tracking-wider uppercase'>
-            {figure.label}
-          </div>
-          <div
-            className='mt-1 font-mono text-2xl font-semibold tracking-tight tabular-nums'
-            title={figure.title}
-          >
-            {figure.value}
-          </div>
-          {figure.hint != null && (
-            <div className='text-muted-foreground mt-0.5 text-xs'>
-              {figure.hint}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
 
 interface Figure {
   label: string
@@ -317,7 +301,7 @@ function HourlyRhythm({
 
 function PromptCard({ prompt, index }: { prompt: TopPrompt; index: number }) {
   return (
-    <div className='bg-card rounded-lg border p-3.5'>
+    <div className='bg-muted/40 rounded-lg p-3.5'>
       <div className='mb-1.5 flex items-center justify-between gap-2'>
         <span className='text-muted-foreground font-mono text-xs'>
           #{index + 1}
@@ -405,61 +389,82 @@ export function DailyReport({ data }: { data: DailySummary }) {
   const meta = data.metadata ?? {}
 
   return (
-    <div className='flex w-full max-w-5xl flex-col gap-8 pb-6'>
-      {/* Header */}
-      <header>
-        <div className='text-primary text-[11px] font-semibold tracking-[0.16em] uppercase'>
-          {t('Daily usage summary')}
-          {data.version != null && (
-            <span className='text-muted-foreground'> · v{data.version}</span>
-          )}
-        </div>
-        <h2 className='mt-1.5 text-2xl font-semibold tracking-tight break-all sm:text-3xl'>
-          {data.identity?.token_name ??
-            `Token #${data.identity?.token_id ?? ''}`}
-        </h2>
-        <div className='text-muted-foreground mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm'>
-          <span className='tabular-nums'>{data.report_date}</span>
-          {data.identity?.token_id != null && (
-            <>
-              <span aria-hidden>·</span>
-              <span>Token #{data.identity.token_id}</span>
-            </>
-          )}
-          {data.identity?.user_id != null && (
-            <>
-              <span aria-hidden>·</span>
-              <span>User #{data.identity.user_id}</span>
-            </>
-          )}
-          {data.timezone != null && (
-            <>
-              <span aria-hidden>·</span>
-              <span>{data.timezone}</span>
-            </>
-          )}
-          {data.generated_at != null && (
-            <>
-              <span aria-hidden>·</span>
-              <span>
-                {t('Generated')} {formatDateTime(data.generated_at)}
-              </span>
-            </>
-          )}
-        </div>
-      </header>
+    <div className='mx-auto flex w-full max-w-7xl flex-col gap-4 pb-6 sm:gap-6'>
+      {/* Overview: identity + key metrics */}
+      <Card>
+        <CardContent className='space-y-5'>
+          <div>
+            <div className='text-primary text-[11px] font-semibold tracking-[0.16em] uppercase'>
+              {t('Daily usage summary')}
+              {data.version != null && (
+                <span className='text-muted-foreground'>
+                  {' '}
+                  · v{data.version}
+                </span>
+              )}
+            </div>
+            <h2 className='mt-1.5 text-2xl font-semibold tracking-tight break-all sm:text-3xl'>
+              {data.identity?.token_name ??
+                `Token #${data.identity?.token_id ?? ''}`}
+            </h2>
+            <div className='text-muted-foreground mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm'>
+              <span className='tabular-nums'>{data.report_date}</span>
+              {data.identity?.token_id != null && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>Token #{data.identity.token_id}</span>
+                </>
+              )}
+              {data.identity?.user_id != null && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>User #{data.identity.user_id}</span>
+                </>
+              )}
+              {data.timezone != null && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{data.timezone}</span>
+                </>
+              )}
+              {data.generated_at != null && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>
+                    {t('Generated')} {formatDateTime(data.generated_at)}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className='grid grid-cols-2 gap-x-6 gap-y-4 border-t pt-4 sm:grid-cols-3 lg:grid-cols-5'>
+            {figures.map((figure) => (
+              <div key={figure.label}>
+                <div className='text-muted-foreground text-[11px] tracking-wider uppercase'>
+                  {figure.label}
+                </div>
+                <div
+                  className='mt-1 font-mono text-2xl font-semibold tracking-tight tabular-nums'
+                  title={figure.title}
+                >
+                  {figure.value}
+                </div>
+                {figure.hint != null && (
+                  <div className='text-muted-foreground mt-0.5 text-xs'>
+                    {figure.hint}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      <MetricStrip figures={figures} />
-
-      {/* AI briefing — the hero. Left accent rule marks the written digest. */}
+      {/* AI briefing — task-type chips + digest bullets */}
       {(bullets.length > 0 ||
         leadLines.length > 0 ||
         (data.task_types?.length ?? 0) > 0) && (
-        <section className='bg-card relative overflow-hidden rounded-xl border p-5 pl-6'>
-          <div className='bg-primary absolute inset-y-0 left-0 w-1' />
-          <div className='text-muted-foreground mb-3 text-[11px] font-semibold tracking-[0.14em] uppercase'>
-            {t('AI Summary')}
-          </div>
+        <SectionCard title={t('AI Summary')}>
           {data.task_types != null && data.task_types.length > 0 && (
             <div className='mb-3 flex flex-wrap gap-1.5'>
               {data.task_types.map((tag) => (
@@ -484,40 +489,37 @@ export function DailyReport({ data }: { data: DailySummary }) {
               ))}
             </ul>
           )}
-        </section>
+        </SectionCard>
       )}
 
       {/* Hourly rhythm — signature timeline */}
       {data.hourly_distribution != null && (
-        <section>
-          <SectionHeading label={t('Activity by hour')} />
+        <SectionCard title={t('Activity by hour')}>
           <HourlyRhythm
             distribution={data.hourly_distribution}
             peakLabel={t('Peak')}
           />
-        </section>
+        </SectionCard>
       )}
 
-      {/* Models + Token economics */}
-      <div className='grid grid-cols-1 gap-8 lg:grid-cols-2'>
+      {/* Models + Token usage */}
+      <div className='grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2'>
         {data.models?.distribution != null && (
-          <section>
-            <SectionHeading
-              label={t('Models')}
-              aside={`${formatInt(data.models.unique_models)} ${t('unique')}`}
-            />
+          <SectionCard
+            title={t('Models')}
+            aside={`${formatInt(data.models.unique_models)} ${t('unique')}`}
+          >
             <ModelBars
               distribution={data.models.distribution}
               topModel={data.models.top_model}
               totalRequests={totalRequests}
               topLabel={t('top')}
             />
-          </section>
+          </SectionCard>
         )}
 
         {(usage.prompt_tokens != null || usage.completion_tokens != null) && (
-          <section>
-            <SectionHeading label={t('Token usage')} />
+          <SectionCard title={t('Token usage')}>
             <div className='flex flex-col gap-4'>
               {usage.prompt_tokens != null && (
                 <div>
@@ -584,14 +586,13 @@ export function DailyReport({ data }: { data: DailySummary }) {
                 </div>
               )}
             </div>
-          </section>
+          </SectionCard>
         )}
       </div>
 
       {/* Latency */}
       {data.latency?.use_time_seconds != null && (
-        <section>
-          <SectionHeading label={t('Latency')} />
+        <SectionCard title={t('Latency')}>
           <StatInline
             items={[
               {
@@ -616,20 +617,19 @@ export function DailyReport({ data }: { data: DailySummary }) {
               },
             ]}
           />
-        </section>
+        </SectionCard>
       )}
 
       {/* Top prompts — what the token actually did */}
       {topPrompts.length > 0 && (
-        <section>
-          <SectionHeading
-            label={t('Top prompts')}
-            aside={
-              data.content_analysis?.analyzed_requests != null
-                ? `${formatInt(data.content_analysis.analyzed_requests)} ${t('analyzed')}`
-                : undefined
-            }
-          />
+        <SectionCard
+          title={t('Top prompts')}
+          aside={
+            data.content_analysis?.analyzed_requests != null
+              ? `${formatInt(data.content_analysis.analyzed_requests)} ${t('analyzed')}`
+              : undefined
+          }
+        >
           <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
             {topPrompts.slice(0, 6).map((prompt, index) => (
               <PromptCard
@@ -639,12 +639,11 @@ export function DailyReport({ data }: { data: DailySummary }) {
               />
             ))}
           </div>
-        </section>
+        </SectionCard>
       )}
 
       {/* Metadata footer */}
-      <section>
-        <SectionHeading label={t('Details')} />
+      <SectionCard title={t('Details')}>
         <div className='text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-xs'>
           {typeof meta.consume_log_count === 'number' && (
             <span>
@@ -679,7 +678,7 @@ export function DailyReport({ data }: { data: DailySummary }) {
             {JSON.stringify(data, null, 2)}
           </pre>
         </details>
-      </section>
+      </SectionCard>
     </div>
   )
 }
