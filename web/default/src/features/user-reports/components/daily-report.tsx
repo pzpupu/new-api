@@ -162,6 +162,17 @@ function formatDateTime(iso?: string, timeZone?: string): string {
   }
 }
 
+// 为可能重复的文本行生成稳定且唯一的 React key：首次出现用原文，重复出现追加
+// 出现序号。key 由内容派生（非数组下标），相同文本也不会冲突而被丢渲染。
+function keyedLines(lines: string[]): { key: string; text: string }[] {
+  const seen = new Map<string, number>()
+  return lines.map((text) => {
+    const seq = seen.get(text) ?? 0
+    seen.set(text, seq + 1)
+    return { key: seq === 0 ? text : `${text}#${seq}`, text }
+  })
+}
+
 // ---- presentational primitives ---------------------------------------------
 
 function SectionCard({
@@ -285,12 +296,15 @@ function HourlyRhythm({
     entry.count > best.count ? entry : best
   )
   const peakHour = String(peak.hour).padStart(2, '0')
-  const peakShare = total > 0 ? Math.round((peak.count / total) * 100) : 0
+  const hasActivity = total > 0
+  const peakShare = hasActivity ? Math.round((peak.count / total) * 100) : 0
   // 结论句同时用于底部文案与柱状图的无障碍描述。
   const summary = t(
     'Most active {{hour}}:00 · {{count}} ({{pct}}% of the day)',
     { hour: peakHour, count: formatInt(peak.count), pct: peakShare }
   )
+  // 当天完全没有活动（空/全零分布）时不谎报「00:00 峰值」，图表描述退回小节标题。
+  const chartLabel = hasActivity ? summary : t('Activity by hour')
   return (
     <div>
       {/* role=img + aria-label 让屏幕阅读器把柱状图作为一张有描述的图读出 */}
@@ -298,7 +312,7 @@ function HourlyRhythm({
         <div
           className='flex h-28 items-end gap-[3px]'
           role='img'
-          aria-label={summary}
+          aria-label={chartLabel}
         >
           {hours.map(({ hour, count }) => {
             // 颜色按繁忙程度（count/max）分档：日节奏一眼可读，不必逐根比高度。
@@ -348,7 +362,9 @@ function HourlyRhythm({
         <span>18</span>
         <span>23</span>
       </div>
-      <div className='text-muted-foreground mt-1 text-xs'>{summary}</div>
+      {hasActivity && (
+        <div className='text-muted-foreground mt-1 text-xs'>{summary}</div>
+      )}
     </div>
   )
 }
@@ -356,20 +372,19 @@ function HourlyRhythm({
 function PromptCard({
   prompt,
   index,
-  viewLabel,
   onOpen,
 }: {
   prompt: TopPrompt
   index: number
-  viewLabel: string
   onOpen: () => void
 }) {
   // 用 button 承载点击/键盘（内部全用 span，符合 button 的内容模型）。
+  // 不设 aria-label：让按钮的可见内容（编号/次数/提示词全文）成为其无障碍名称，
+  // 读屏才能区分每条提示词，而不是都念成通用的 "View"。
   return (
     <button
       type='button'
       onClick={onOpen}
-      aria-label={viewLabel}
       className='bg-muted/40 hover:bg-muted/70 focus-visible:ring-ring/50 block w-full cursor-pointer rounded-lg p-3.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none'
     >
       <span className='mb-1.5 flex items-center justify-between gap-2'>
@@ -417,7 +432,6 @@ function TopPromptsSection({
             key={prompt.text ?? JSON.stringify(prompt)}
             prompt={prompt}
             index={index}
-            viewLabel={t('View')}
             onOpen={() => setSelected(prompt)}
           />
         ))}
@@ -499,7 +513,12 @@ export function DailyReport({ data }: { data: DailySummary }) {
     },
     {
       label: t('Quota'),
-      value: formatQuotaWithCurrency(usage.quota?.total),
+      // 缺失额度用 em dash「—」，与其他缺失指标（formatInt/formatSeconds）一致；
+      // 真实的 0 额度仍走 formatQuotaWithCurrency 显示 $0。
+      value:
+        usage.quota?.total != null
+          ? formatQuotaWithCurrency(usage.quota.total)
+          : '—',
     },
     {
       label: t('Avg latency'),
@@ -615,19 +634,19 @@ export function DailyReport({ data }: { data: DailySummary }) {
               ))}
             </div>
           )}
-          {leadLines.map((line) => (
-            <p key={line} className='text-foreground/90 mb-2 leading-relaxed'>
-              {line}
+          {keyedLines(leadLines).map(({ key, text }) => (
+            <p key={key} className='text-foreground/90 mb-2 leading-relaxed'>
+              {text}
             </p>
           ))}
           {bullets.length > 0 && (
             <ul className='flex flex-col gap-2'>
-              {bullets.map((bullet) => (
+              {keyedLines(bullets).map(({ key, text }) => (
                 <li
-                  key={bullet}
+                  key={key}
                   className='text-foreground/90 before:bg-primary relative pl-4 text-sm leading-relaxed before:absolute before:top-2 before:left-0 before:size-1.5 before:rounded-full before:content-[""]'
                 >
-                  {bullet}
+                  {text}
                 </li>
               ))}
             </ul>

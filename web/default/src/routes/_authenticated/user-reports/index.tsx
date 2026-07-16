@@ -24,9 +24,9 @@ import { UserReports } from '@/features/user-reports'
 // Persist the selected token / date (and admin target user) in the URL so the
 // view is refresh-safe, shareable, and works with browser back/forward.
 const userReportsSearchSchema = z.object({
-  token: z.number().optional().catch(undefined),
+  token: z.number().int().positive().optional().catch(undefined),
   date: z.string().optional().catch(undefined),
-  user: z.number().optional().catch(undefined),
+  user: z.number().int().positive().optional().catch(undefined),
 })
 
 export const Route = createFileRoute('/_authenticated/user-reports/')({

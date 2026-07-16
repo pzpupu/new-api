@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
@@ -165,9 +165,15 @@ export function UserReports() {
     [navigate]
   )
 
-  // 键盘 ← / → 快速翻天；输入框、下拉、弹窗聚焦时不拦截，避免抢占方向键。
+  // 把相邻日期放进 ref，供全局键盘监听读取最新值，避免监听器随日期变化反复重订阅。
+  const stepDatesRef = useRef<{ older?: string; newer?: string }>({})
+  stepDatesRef.current = { older: olderDate, newer: newerDate }
+
+  // 键盘 ← / → 快速翻天。焦点在输入框/下拉/按钮/弹窗上，或按键自动重复时不拦截，
+  // 避免抢占这些控件的方向键、以及长按导致的历史记录刷屏。
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
+      if (event.repeat) return
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
         return
       }
@@ -177,23 +183,27 @@ export function UserReports() {
         el != null &&
         (el.tagName === 'INPUT' ||
           el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT' ||
+          el.tagName === 'BUTTON' ||
           el.isContentEditable ||
           el.getAttribute('role') === 'combobox' ||
+          el.getAttribute('role') === 'button' ||
           el.closest('[role="listbox"],[role="dialog"]') != null)
       ) {
         return
       }
-      if (event.key === 'ArrowLeft' && olderDate != null) {
+      const { older, newer } = stepDatesRef.current
+      if (event.key === 'ArrowLeft' && older != null) {
         event.preventDefault()
-        goToDate(olderDate)
-      } else if (event.key === 'ArrowRight' && newerDate != null) {
+        goToDate(older)
+      } else if (event.key === 'ArrowRight' && newer != null) {
         event.preventDefault()
-        goToDate(newerDate)
+        goToDate(newer)
       }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [olderDate, newerDate, goToDate])
+  }, [goToDate])
 
   let body: ReactNode
   if (listQuery.isLoading) {
