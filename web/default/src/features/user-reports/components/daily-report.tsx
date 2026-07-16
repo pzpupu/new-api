@@ -122,13 +122,10 @@ function formatDateTime(iso?: string): string {
   if (!iso) return '—'
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  // Locale-neutral YYYY-MM-DD HH:mm so the report reads consistently
+  // regardless of browser locale.
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 // ---- presentational primitives ---------------------------------------------
