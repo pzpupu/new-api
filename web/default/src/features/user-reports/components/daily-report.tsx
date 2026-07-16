@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -26,6 +26,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { formatQuotaWithCurrency } from '@/lib/currency'
 import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
@@ -127,14 +135,25 @@ function formatBytes(value?: number): string {
   return `${trimZeros(n.toFixed(1))} ${units[i]}`
 }
 
-function formatDateTime(iso?: string): string {
+function formatDateTime(iso?: string, timeZone?: string): string {
   if (!iso) return '—'
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
-  // Locale-neutral YYYY-MM-DD HH:mm so the report reads consistently
-  // regardless of browser locale.
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  try {
+    // sv-SE 输出 YYYY-MM-DD HH:mm；按报告自身时区显示，跨时区查看也一致。
+    return new Intl.DateTimeFormat('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: timeZone || undefined,
+    }).format(date)
+  } catch {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
 }
 
 // ---- presentational primitives ---------------------------------------------
@@ -176,7 +195,7 @@ function StatInline({ items }: { items: { label: string; value: string }[] }) {
     <div className='flex flex-wrap gap-x-5 gap-y-1.5'>
       {items.map((item) => (
         <div key={item.label} className='flex items-baseline gap-1.5'>
-          <span className='text-muted-foreground text-[10px] tracking-wider uppercase'>
+          <span className='text-muted-foreground text-[11px] tracking-wider uppercase'>
             {item.label}
           </span>
           <span className='font-mono text-sm tabular-nums'>{item.value}</span>
@@ -246,9 +265,11 @@ function ModelBars({
 
 function HourlyRhythm({
   distribution,
+  label,
   peakLabel,
 }: {
   distribution: Record<string, number>
+  label: string
   peakLabel: string
 }) {
   const hours = Array.from({ length: 24 }, (_, hour) => {
@@ -259,9 +280,15 @@ function HourlyRhythm({
   const peak = hours.reduce((best, entry) =>
     entry.count > best.count ? entry : best
   )
+  const peakHour = String(peak.hour).padStart(2, '0')
   return (
     <div>
-      <div className='flex h-28 items-end gap-[3px]'>
+      {/* role=img + aria-label 让屏幕阅读器把柱状图作为一张有描述的图读出 */}
+      <div
+        className='flex h-28 items-end gap-[3px]'
+        role='img'
+        aria-label={`${label}: ${peakLabel} ${peakHour}:00 · ${formatInt(peak.count)}`}
+      >
         {hours.map(({ hour, count }) => {
           const isPeak = count > 0 && hour === peak.hour
           let barColor = 'bg-primary/30'
@@ -286,7 +313,7 @@ function HourlyRhythm({
           )
         })}
       </div>
-      <div className='text-muted-foreground mt-1.5 flex justify-between text-[10px] tabular-nums'>
+      <div className='text-muted-foreground mt-1.5 flex justify-between text-[11px] tabular-nums'>
         <span>00</span>
         <span>06</span>
         <span>12</span>
@@ -294,29 +321,44 @@ function HourlyRhythm({
         <span>23</span>
       </div>
       <div className='text-muted-foreground mt-1 text-xs'>
-        {peakLabel} {String(peak.hour).padStart(2, '0')}:00 ·{' '}
-        {formatInt(peak.count)}
+        {peakLabel} {peakHour}:00 · {formatInt(peak.count)}
       </div>
     </div>
   )
 }
 
-function PromptCard({ prompt, index }: { prompt: TopPrompt; index: number }) {
+function PromptCard({
+  prompt,
+  index,
+  viewLabel,
+  onOpen,
+}: {
+  prompt: TopPrompt
+  index: number
+  viewLabel: string
+  onOpen: () => void
+}) {
+  // 用 button 承载点击/键盘（内部全用 span，符合 button 的内容模型）。
   return (
-    <div className='bg-muted/40 rounded-lg p-3.5'>
-      <div className='mb-1.5 flex items-center justify-between gap-2'>
+    <button
+      type='button'
+      onClick={onOpen}
+      aria-label={viewLabel}
+      className='bg-muted/40 hover:bg-muted/70 focus-visible:ring-ring/50 block w-full cursor-pointer rounded-lg p-3.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none'
+    >
+      <span className='mb-1.5 flex items-center justify-between gap-2'>
         <span className='text-muted-foreground font-mono text-xs'>
           #{index + 1}
         </span>
         <span className='bg-muted rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums'>
           ×{formatInt(prompt.count)}
         </span>
-      </div>
-      <p className='text-foreground/90 line-clamp-3 text-sm leading-relaxed whitespace-pre-wrap'>
+      </span>
+      <span className='text-foreground/90 line-clamp-3 text-sm leading-relaxed whitespace-pre-wrap'>
         {prompt.text}
-      </p>
+      </span>
       {prompt.models != null && prompt.models.length > 0 && (
-        <div className='mt-2 flex flex-wrap gap-1'>
+        <span className='mt-2 flex flex-wrap gap-1'>
           {prompt.models.map((model) => (
             <span
               key={model}
@@ -325,9 +367,80 @@ function PromptCard({ prompt, index }: { prompt: TopPrompt; index: number }) {
               {model}
             </span>
           ))}
-        </div>
+        </span>
       )}
-    </div>
+    </button>
+  )
+}
+
+function TopPromptsSection({
+  prompts,
+  aside,
+}: {
+  prompts: TopPrompt[]
+  aside?: ReactNode
+}) {
+  const { t } = useTranslation()
+  const [selected, setSelected] = useState<TopPrompt | null>(null)
+  const shown = prompts.slice(0, 6)
+  return (
+    <SectionCard title={t('Top prompts')} aside={aside}>
+      <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
+        {shown.map((prompt, index) => (
+          <PromptCard
+            key={prompt.text ?? JSON.stringify(prompt)}
+            prompt={prompt}
+            index={index}
+            viewLabel={t('View')}
+            onOpen={() => setSelected(prompt)}
+          />
+        ))}
+      </div>
+      {prompts.length > shown.length && (
+        <p className='text-muted-foreground mt-3 text-xs'>
+          {t('Showing top {{shown}} of {{total}}', {
+            shown: shown.length,
+            total: prompts.length,
+          })}
+        </p>
+      )}
+      <Dialog
+        open={selected != null}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null)
+        }}
+      >
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>{t('Full prompt')}</DialogTitle>
+            {selected != null && (
+              <DialogDescription className='tabular-nums'>
+                ×{formatInt(selected.count)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          {selected != null && (
+            <div className='flex flex-col gap-3'>
+              <pre className='bg-muted/40 max-h-[55vh] overflow-auto rounded-lg p-3 text-sm break-words whitespace-pre-wrap'>
+                {selected.text}
+              </pre>
+              {selected.models != null && selected.models.length > 0 && (
+                <div className='flex flex-wrap gap-1'>
+                  {selected.models.map((model) => (
+                    <span
+                      key={model}
+                      className='bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px]'
+                    >
+                      {model}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </SectionCard>
   )
 }
 
@@ -360,8 +473,7 @@ export function DailyReport({ data }: { data: DailySummary }) {
     },
     {
       label: t('Quota'),
-      value: formatCompact(usage.quota?.total),
-      title: formatInt(usage.quota?.total),
+      value: formatQuotaWithCurrency(usage.quota?.total),
     },
     {
       label: t('Avg latency'),
@@ -435,7 +547,8 @@ export function DailyReport({ data }: { data: DailySummary }) {
                 <>
                   <span aria-hidden>·</span>
                   <span>
-                    {t('Generated')} {formatDateTime(data.generated_at)}
+                    {t('Generated')}{' '}
+                    {formatDateTime(data.generated_at, data.timezone)}
                   </span>
                 </>
               )}
@@ -501,6 +614,7 @@ export function DailyReport({ data }: { data: DailySummary }) {
         <SectionCard title={t('Activity by hour')}>
           <HourlyRhythm
             distribution={data.hourly_distribution}
+            label={t('Activity by hour')}
             peakLabel={t('Peak')}
           />
         </SectionCard>
@@ -624,26 +738,16 @@ export function DailyReport({ data }: { data: DailySummary }) {
         </SectionCard>
       )}
 
-      {/* Top prompts — what the token actually did */}
+      {/* Top prompts — what the token actually did（点开看全文） */}
       {topPrompts.length > 0 && (
-        <SectionCard
-          title={t('Top prompts')}
+        <TopPromptsSection
+          prompts={topPrompts}
           aside={
             data.content_analysis?.analyzed_requests != null
               ? `${formatInt(data.content_analysis.analyzed_requests)} ${t('analyzed')}`
               : undefined
           }
-        >
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
-            {topPrompts.slice(0, 6).map((prompt, index) => (
-              <PromptCard
-                key={prompt.text ?? JSON.stringify(prompt)}
-                prompt={prompt}
-                index={index}
-              />
-            ))}
-          </div>
-        </SectionCard>
+        />
       )}
 
       {/* Metadata footer — admin only */}

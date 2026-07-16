@@ -18,13 +18,12 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
 import { getRouteApi } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -37,7 +36,9 @@ import { useAuthStore } from '@/stores/auth-store'
 
 import './i18n'
 import { getUserReport, listUserReports } from './api'
+import { ReportSkeleton } from './components/report-skeleton'
 import { ReportViewer } from './components/report-viewer'
+import { UserSelect } from './components/user-select'
 
 const route = getRouteApi('/_authenticated/user-reports/')
 
@@ -77,9 +78,6 @@ export function UserReports() {
 
   // 选中项持久化在 URL：token / date，以及管理员的目标 user。
   const targetUserId = isAdmin ? search.user : undefined
-  const [userIdInput, setUserIdInput] = useState(() =>
-    search.user != null ? String(search.user) : ''
-  )
 
   const listQuery = useQuery({
     queryKey: ['user-reports', 'list', targetUserId ?? 'self'],
@@ -147,26 +145,17 @@ export function UserReports() {
   const contentErrored =
     contentQuery.isError || contentEnvelope?.success === false
 
-  const commitUserId = () => {
-    const trimmed = userIdInput.trim()
-    const parsed = Number(trimmed)
-    const user =
-      trimmed && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
-    navigate({
-      search: (prev) => ({ ...prev, user, token: undefined, date: undefined }),
-    })
+  const isFetching = listQuery.isFetching || contentQuery.isFetching
+  const refetchAll = () => {
+    listQuery.refetch()
+    if (effectiveTokenId != null && effectiveDate != null) {
+      contentQuery.refetch()
+    }
   }
-
-  const loadingState = (
-    <CenterState>
-      <Loader2 className='size-4 animate-spin' />
-      {t('Loading...')}
-    </CenterState>
-  )
 
   let body: ReactNode
   if (listQuery.isLoading) {
-    body = loadingState
+    body = <ReportSkeleton />
   } else if (listErrored) {
     body = (
       <ErrorState
@@ -178,7 +167,7 @@ export function UserReports() {
   } else if (entries.length === 0) {
     body = <CenterState>{t('No reports found')}</CenterState>
   } else if (contentQuery.isLoading) {
-    body = loadingState
+    body = <ReportSkeleton />
   } else if (contentErrored) {
     body = (
       <ErrorState
@@ -198,16 +187,19 @@ export function UserReports() {
       <SectionPageLayout.Title>{t('Usage Summary')}</SectionPageLayout.Title>
       <SectionPageLayout.Actions>
         {isAdmin && (
-          <Input
-            value={userIdInput}
-            onChange={(event) => setUserIdInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') commitUserId()
-            }}
-            onBlur={commitUserId}
-            placeholder={t('User ID (admin)')}
-            inputMode='numeric'
-            className='h-8 w-36'
+          <UserSelect
+            value={targetUserId}
+            onChange={(user) =>
+              navigate({
+                search: (prev) => ({
+                  ...prev,
+                  user,
+                  token: undefined,
+                  date: undefined,
+                }),
+              })
+            }
+            className='w-56'
           />
         )}
         {tokens.length > 0 && (
@@ -260,6 +252,15 @@ export function UserReports() {
             </SelectContent>
           </Select>
         )}
+        <Button
+          variant='outline'
+          size='icon'
+          onClick={refetchAll}
+          aria-label={t('Refresh')}
+          title={t('Refresh')}
+        >
+          <RefreshCw className={isFetching ? 'animate-spin' : undefined} />
+        </Button>
       </SectionPageLayout.Actions>
       <SectionPageLayout.Content>{body}</SectionPageLayout.Content>
     </SectionPageLayout>

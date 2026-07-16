@@ -49,6 +49,10 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': 'Admin only',
     'Failed to load reports': 'Failed to load reports',
     'Failed to load report': 'Failed to load report',
+    'Showing top {{shown}} of {{total}}': 'Showing top {{shown}} of {{total}}',
+    'Full prompt': 'Full prompt',
+    'Search user': 'Search user',
+    'No users found': 'No users found',
   },
   zhCN: {
     'Usage Summary': '使用总结',
@@ -77,6 +81,11 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': '仅管理员可见',
     'Failed to load reports': '加载报告列表失败',
     'Failed to load report': '加载报告失败',
+    'Showing top {{shown}} of {{total}}':
+      '显示前 {{shown}} 条，共 {{total}} 条',
+    'Full prompt': '完整提示词',
+    'Search user': '搜索用户',
+    'No users found': '未找到用户',
   },
   zhTW: {
     'Usage Summary': '使用總結',
@@ -105,6 +114,11 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': '僅管理員可見',
     'Failed to load reports': '載入報告列表失敗',
     'Failed to load report': '載入報告失敗',
+    'Showing top {{shown}} of {{total}}':
+      '顯示前 {{shown}} 條，共 {{total}} 條',
+    'Full prompt': '完整提示詞',
+    'Search user': '搜尋使用者',
+    'No users found': '找不到使用者',
   },
   ja: {
     'Usage Summary': '利用サマリー',
@@ -133,6 +147,11 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': '管理者のみ',
     'Failed to load reports': 'レポート一覧の読み込みに失敗しました',
     'Failed to load report': 'レポートの読み込みに失敗しました',
+    'Showing top {{shown}} of {{total}}':
+      '上位 {{shown}} 件を表示（全 {{total}} 件）',
+    'Full prompt': 'プロンプト全文',
+    'Search user': 'ユーザーを検索',
+    'No users found': 'ユーザーが見つかりません',
   },
   ru: {
     'Usage Summary': 'Сводка использования',
@@ -161,6 +180,11 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': 'Только для админов',
     'Failed to load reports': 'Не удалось загрузить список отчётов',
     'Failed to load report': 'Не удалось загрузить отчёт',
+    'Showing top {{shown}} of {{total}}':
+      'Показаны первые {{shown}} из {{total}}',
+    'Full prompt': 'Полный запрос',
+    'Search user': 'Поиск пользователя',
+    'No users found': 'Пользователи не найдены',
   },
   fr: {
     'Usage Summary': "Résumé d'utilisation",
@@ -190,6 +214,11 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': 'Admins uniquement',
     'Failed to load reports': 'Échec du chargement des rapports',
     'Failed to load report': 'Échec du chargement du rapport',
+    'Showing top {{shown}} of {{total}}':
+      'Affichage des {{shown}} premiers sur {{total}}',
+    'Full prompt': 'Prompt complet',
+    'Search user': 'Rechercher un utilisateur',
+    'No users found': 'Aucun utilisateur trouvé',
   },
   vi: {
     'Usage Summary': 'Tóm tắt sử dụng',
@@ -218,6 +247,11 @@ const resources: Record<string, Record<string, string>> = {
     'Admin only': 'Chỉ quản trị viên',
     'Failed to load reports': 'Không tải được danh sách báo cáo',
     'Failed to load report': 'Không tải được báo cáo',
+    'Showing top {{shown}} of {{total}}':
+      'Hiển thị {{shown}} đầu trong số {{total}}',
+    'Full prompt': 'Prompt đầy đủ',
+    'Search user': 'Tìm người dùng',
+    'No users found': 'Không tìm thấy người dùng',
   },
 }
 
