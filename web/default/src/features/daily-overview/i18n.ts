@@ -24,6 +24,7 @@ import i18n from '@/i18n/config'
 const resources: Record<string, Record<string, string>> = {
   en: {
     'Usage Overview': 'Usage Overview',
+    'Usage Summary': 'Usage Summary',
     'Daily usage overview': 'Daily usage overview',
     'Total users': 'Total users',
     'Active tokens': 'active tokens',
@@ -45,6 +46,7 @@ const resources: Record<string, Record<string, string>> = {
   },
   zhCN: {
     'Usage Overview': '使用总览',
+    'Usage Summary': '使用总结',
     'Daily usage overview': '每日使用总览',
     'Total users': '用户总数',
     'Active tokens': '个活跃令牌',
@@ -66,6 +68,7 @@ const resources: Record<string, Record<string, string>> = {
   },
   zhTW: {
     'Usage Overview': '使用總覽',
+    'Usage Summary': '使用總結',
     'Daily usage overview': '每日使用總覽',
     'Total users': '使用者總數',
     'Active tokens': '個活躍權杖',
@@ -87,6 +90,7 @@ const resources: Record<string, Record<string, string>> = {
   },
   ja: {
     'Usage Overview': '利用概況',
+    'Usage Summary': '利用サマリー',
     'Daily usage overview': '日次利用概況',
     'Total users': 'ユーザー総数',
     'Active tokens': '個のアクティブトークン',
@@ -108,6 +112,7 @@ const resources: Record<string, Record<string, string>> = {
   },
   ru: {
     'Usage Overview': 'Обзор использования',
+    'Usage Summary': 'Сводка использования',
     'Daily usage overview': 'Ежедневный обзор использования',
     'Total users': 'Всего пользователей',
     'Active tokens': 'активных токенов',
@@ -129,6 +134,7 @@ const resources: Record<string, Record<string, string>> = {
   },
   fr: {
     'Usage Overview': "Aperçu d'utilisation",
+    'Usage Summary': "Résumé d'utilisation",
     'Daily usage overview': "Aperçu d'utilisation quotidien",
     'Total users': "Nombre d'utilisateurs",
     'Active tokens': 'jetons actifs',
@@ -151,6 +157,7 @@ const resources: Record<string, Record<string, string>> = {
   },
   vi: {
     'Usage Overview': 'Tổng quan sử dụng',
+    'Usage Summary': 'Tóm tắt sử dụng',
     'Daily usage overview': 'Tổng quan sử dụng hằng ngày',
     'Total users': 'Tổng người dùng',
     'Active tokens': 'token hoạt động',

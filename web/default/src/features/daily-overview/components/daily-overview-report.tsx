@@ -16,7 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { ChevronRight } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ChevronRight, ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -225,14 +226,26 @@ function UserBlock({
         <span className='text-muted-foreground w-6 shrink-0 text-right font-mono text-xs tabular-nums'>
           #{rank}
         </span>
-        <span className='min-w-0 flex-1 truncate'>
-          <span className='text-sm font-semibold'>
+        <div className='flex min-w-0 flex-1 items-center gap-2'>
+          <span className='truncate text-sm font-semibold'>
             {user.username || `User #${user.user_id ?? ''}`}
           </span>
-          <span className='text-muted-foreground ml-2 text-xs'>
+          <span className='text-muted-foreground shrink-0 text-xs'>
             #{user.user_id} · {tokens.length} {t('Active tokens')}
           </span>
-        </span>
+          {user.user_id != null && (
+            <Link
+              to='/user-reports'
+              search={{ user: user.user_id, date: reportDate }}
+              aria-label={t('Usage Summary')}
+              title={t('Usage Summary')}
+              className='text-primary hover:text-primary/80 inline-flex shrink-0 items-center gap-0.5 text-xs'
+            >
+              <span className='hidden sm:inline'>{t('Usage Summary')}</span>
+              <ExternalLink className='size-3.5' aria-hidden />
+            </Link>
+          )}
+        </div>
         <span className='hidden shrink-0 items-baseline gap-4 sm:flex'>
           <InlineMetric
             label={t('Requests')}
