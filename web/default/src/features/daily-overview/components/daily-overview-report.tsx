@@ -16,7 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Link } from '@tanstack/react-router'
 import { ChevronRight, ExternalLink } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -64,6 +63,20 @@ function InlineMetric({ label, value }: { label: string; value: string }) {
   )
 }
 
+// 构造某用户 / token 的「使用总结」详情页链接（点击名称在新标签打开）。
+function usageSummaryHref(params: {
+  user?: number
+  token?: number
+  date?: string
+}): string {
+  const query = new URLSearchParams()
+  if (params.user != null) query.set('user', String(params.user))
+  if (params.token != null) query.set('token', String(params.token))
+  if (params.date != null) query.set('date', params.date)
+  const qs = query.toString()
+  return qs ? `/user-reports?${qs}` : '/user-reports'
+}
+
 // 汇总所有用户各 token 的模型分布，得到全站模型使用总量。
 function aggregateModels(users: OverviewUserBreakdown[]): {
   distribution: Record<string, number>
@@ -91,9 +104,11 @@ function aggregateModels(users: OverviewUserBreakdown[]): {
 // 展开后看明细（输入输出/延迟分位、任务类型、AI 总结、模型分布）。
 function TokenRow({
   token,
+  userId,
   reportDate,
 }: {
   token: OverviewTokenBreakdown
+  userId?: number
   reportDate?: string
 }) {
   const { t } = useTranslation()
@@ -110,40 +125,64 @@ function TokenRow({
       onOpenChange={setOpen}
       className='border-border/50 rounded-lg border'
     >
-      <CollapsibleTrigger className='hover:bg-muted/40 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors'>
-        <ChevronRight
-          className={cn(
-            'text-muted-foreground size-4 shrink-0 transition-transform',
-            open && 'rotate-90'
-          )}
-          aria-hidden
+      {/* 整行可折叠：底层覆盖式触发按钮吃掉整行点击；上层内容 pointer-events-none，
+          唯独令牌名链接 pointer-events-auto 自己捕获点击，在新标签打开使用总结。 */}
+      <div className='relative'>
+        <CollapsibleTrigger
+          aria-label={token.token_name || `Token #${token.token_id ?? ''}`}
+          className='hover:bg-muted/40 focus-visible:ring-ring/50 absolute inset-0 rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none'
         />
-        <span className='min-w-0 flex-1'>
-          <span className='block truncate text-sm font-medium'>
-            {token.token_name || `Token #${token.token_id ?? ''}`}
-          </span>
-          {token.top_model != null && (
-            <span className='text-muted-foreground block truncate font-mono text-xs'>
-              {token.top_model}
-            </span>
-          )}
-          {hasTaskTypes && (
-            <span className='mt-1 flex flex-wrap gap-1'>
-              {token.task_types?.map((tag) => <Chip key={tag}>{tag}</Chip>)}
-            </span>
-          )}
-        </span>
-        <span className='hidden shrink-0 items-baseline gap-4 sm:flex'>
-          <InlineMetric label={t('Requests')} value={formatInt(token.requests)} />
-          <InlineMetric
-            label={t('Total tokens')}
-            value={formatCompact(totalTokens)}
+        <div className='pointer-events-none relative flex items-center gap-3 px-3 py-2'>
+          <ChevronRight
+            className={cn(
+              'text-muted-foreground size-4 shrink-0 transition-transform',
+              open && 'rotate-90'
+            )}
+            aria-hidden
           />
-        </span>
-        <span className='w-20 shrink-0 text-right font-mono text-sm tabular-nums'>
-          {token.quota != null ? formatQuotaWithCurrency(token.quota) : '—'}
-        </span>
-      </CollapsibleTrigger>
+          <div className='min-w-0 flex-1'>
+            <a
+              href={usageSummaryHref({
+                user: userId,
+                token: token.token_id,
+                date: reportDate,
+              })}
+              target='_blank'
+              rel='noreferrer'
+              title={t('Usage Summary')}
+              className='pointer-events-auto inline-flex max-w-full items-center gap-1 text-sm font-medium hover:underline'
+            >
+              <span className='truncate'>
+                {token.token_name || `Token #${token.token_id ?? ''}`}
+              </span>
+              <ExternalLink className='size-3 shrink-0 opacity-60' aria-hidden />
+            </a>
+            {token.top_model != null && (
+              <span className='text-muted-foreground block truncate font-mono text-xs'>
+                {token.top_model}
+              </span>
+            )}
+            {hasTaskTypes && (
+              <span className='mt-1 flex flex-wrap gap-1'>
+                {token.task_types?.map((tag) => <Chip key={tag}>{tag}</Chip>)}
+              </span>
+            )}
+          </div>
+          <span className='hidden shrink-0 items-baseline gap-4 sm:flex'>
+            <InlineMetric
+              label={t('Requests')}
+              value={formatInt(token.requests)}
+            />
+            <InlineMetric
+              label={t('Total tokens')}
+              value={formatCompact(totalTokens)}
+            />
+          </span>
+          <span className='w-20 shrink-0 text-right font-mono text-sm tabular-nums'>
+            {token.quota != null ? formatQuotaWithCurrency(token.quota) : '—'}
+          </span>
+        </div>
+      </div>
       <CollapsibleContent>
         <div className='flex flex-col gap-3 px-3 pt-1 pb-3'>
           <StatInline
@@ -227,24 +266,28 @@ function UserBlock({
           #{rank}
         </span>
         <div className='flex min-w-0 flex-1 items-center gap-2'>
-          <span className='truncate text-sm font-semibold'>
-            {user.username || `User #${user.user_id ?? ''}`}
-          </span>
+          {/* 点击用户名在新标签打开该用户的使用总结详情 */}
+          {user.user_id != null ? (
+            <a
+              href={usageSummaryHref({ user: user.user_id, date: reportDate })}
+              target='_blank'
+              rel='noreferrer'
+              title={t('Usage Summary')}
+              className='inline-flex min-w-0 items-center gap-1 text-sm font-semibold hover:underline'
+            >
+              <span className='truncate'>
+                {user.username || `User #${user.user_id}`}
+              </span>
+              <ExternalLink className='size-3 shrink-0 opacity-60' aria-hidden />
+            </a>
+          ) : (
+            <span className='truncate text-sm font-semibold'>
+              {user.username || 'User'}
+            </span>
+          )}
           <span className='text-muted-foreground shrink-0 text-xs'>
             #{user.user_id} · {tokens.length} {t('Active tokens')}
           </span>
-          {user.user_id != null && (
-            <Link
-              to='/user-reports'
-              search={{ user: user.user_id, date: reportDate }}
-              aria-label={t('Usage Summary')}
-              title={t('Usage Summary')}
-              className='text-primary hover:text-primary/80 inline-flex shrink-0 items-center gap-0.5 text-xs'
-            >
-              <span className='hidden sm:inline'>{t('Usage Summary')}</span>
-              <ExternalLink className='size-3.5' aria-hidden />
-            </Link>
-          )}
         </div>
         <span className='hidden shrink-0 items-baseline gap-4 sm:flex'>
           <InlineMetric
@@ -268,6 +311,7 @@ function UserBlock({
             <TokenRow
               key={token.token_id ?? token.token_name}
               token={token}
+              userId={user.user_id}
               reportDate={reportDate}
             />
           ))}
