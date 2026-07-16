@@ -26,7 +26,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 // Known shape of report_type === 'user_daily_summary' (v1.x). All fields are
 // optional so a missing/renamed field degrades gracefully rather than crashing.
@@ -333,6 +335,8 @@ function PromptCard({ prompt, index }: { prompt: TopPrompt; index: number }) {
 
 export function DailyReport({ data }: { data: DailySummary }) {
   const { t } = useTranslation()
+  const role = useAuthStore((s) => s.auth.user?.role) ?? 0
+  const isAdmin = role >= ROLE.ADMIN
 
   const usage = data.usage ?? {}
   const promptTotal = usage.prompt_tokens?.total ?? 0
@@ -642,43 +646,45 @@ export function DailyReport({ data }: { data: DailySummary }) {
         </SectionCard>
       )}
 
-      {/* Metadata footer */}
-      <SectionCard title={t('Details')}>
-        <div className='text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-xs'>
-          {typeof meta.consume_log_count === 'number' && (
-            <span>
-              {t('Logs analyzed')}:{' '}
-              <span className='text-foreground font-mono tabular-nums'>
-                {formatInt(meta.consume_log_count)}
+      {/* Metadata footer — admin only */}
+      {isAdmin && (
+        <SectionCard title={t('Details')}>
+          <div className='text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-xs'>
+            {typeof meta.consume_log_count === 'number' && (
+              <span>
+                {t('Logs analyzed')}:{' '}
+                <span className='text-foreground font-mono tabular-nums'>
+                  {formatInt(meta.consume_log_count)}
+                </span>
               </span>
-            </span>
-          )}
-          {typeof meta.cwli_total_bytes_scanned === 'number' && (
-            <span>
-              {t('Data scanned')}:{' '}
-              <span className='text-foreground font-mono'>
-                {formatBytes(meta.cwli_total_bytes_scanned)}
+            )}
+            {typeof meta.cwli_total_bytes_scanned === 'number' && (
+              <span>
+                {t('Data scanned')}:{' '}
+                <span className='text-foreground font-mono'>
+                  {formatBytes(meta.cwli_total_bytes_scanned)}
+                </span>
               </span>
-            </span>
-          )}
-          {typeof meta.llm_channel_used === 'string' && (
-            <span>
-              {t('Summary channel')}:{' '}
-              <span className='text-foreground font-mono'>
-                {meta.llm_channel_used}
+            )}
+            {typeof meta.llm_channel_used === 'string' && (
+              <span>
+                {t('Summary channel')}:{' '}
+                <span className='text-foreground font-mono'>
+                  {meta.llm_channel_used}
+                </span>
               </span>
-            </span>
-          )}
-        </div>
-        <details className='mt-3'>
-          <summary className='text-muted-foreground cursor-pointer text-xs select-none'>
-            {t('Raw JSON')}
-          </summary>
-          <pre className='bg-muted/30 mt-2 overflow-x-auto rounded-lg border p-3 text-xs'>
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        </details>
-      </SectionCard>
+            )}
+          </div>
+          <details className='mt-3'>
+            <summary className='text-muted-foreground cursor-pointer text-xs select-none'>
+              {t('Raw JSON')}
+            </summary>
+            <pre className='bg-muted/30 mt-2 overflow-x-auto rounded-lg border p-3 text-xs'>
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          </details>
+        </SectionCard>
+      )}
     </div>
   )
 }
