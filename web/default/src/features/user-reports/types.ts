@@ -17,18 +17,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 export interface UserReportEntry {
-  token_id: number;
-  date: string;
-  key: string;
-  size: number;
-  last_modified: number;
+  token_id: number
+  date: string
+  key: string
+  size: number
+  last_modified: number
 }
 
 // 报告正文由外部应用生成，结构不固定，前端按通用方式渲染。
-export type UserReportContent = Record<string, unknown>;
+export type UserReportContent = Record<string, unknown>
 
 export interface ApiEnvelope<T> {
-  success: boolean;
-  message?: string;
-  data?: T;
+  success: boolean
+  message?: string
+  data?: T
 }

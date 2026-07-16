@@ -5110,6 +5110,22 @@
     "No report for the selected date": "Нет отчёта за выбранную дату",
     "User ID (admin)": "ID пользователя (админ)",
     "AI Summary": "AI-сводка",
-    "Statistics": "Статистика"
+    "Statistics": "Статистика",
+    "Daily usage summary": "Ежедневная сводка использования",
+    "streaming": "потоковые",
+    "Avg latency": "Ср. задержка",
+    "Models used": "Моделей использовано",
+    "Generated": "Создано",
+    "Activity by hour": "Активность по часам",
+    "unique": "уник.",
+    "top": "топ",
+    "Token usage": "Использование токенов",
+    "Prompt tokens": "Входные токены",
+    "Completion tokens": "Выходные токены",
+    "Top prompts": "Частые запросы",
+    "analyzed": "проанализировано",
+    "Logs analyzed": "Проанализировано логов",
+    "Data scanned": "Просканировано данных",
+    "Summary channel": "Канал сводки"
   }
 }

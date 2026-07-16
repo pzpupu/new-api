@@ -5110,6 +5110,22 @@
     "No report for the selected date": "Không có báo cáo cho ngày đã chọn",
     "User ID (admin)": "ID người dùng (quản trị)",
     "AI Summary": "Tóm tắt AI",
-    "Statistics": "Thống kê"
+    "Statistics": "Thống kê",
+    "Daily usage summary": "Tóm tắt sử dụng hằng ngày",
+    "streaming": "truyền phát",
+    "Avg latency": "Độ trễ TB",
+    "Models used": "Số mô hình đã dùng",
+    "Generated": "Tạo lúc",
+    "Activity by hour": "Hoạt động theo giờ",
+    "unique": "duy nhất",
+    "top": "cao nhất",
+    "Token usage": "Sử dụng token",
+    "Prompt tokens": "Token đầu vào",
+    "Completion tokens": "Token đầu ra",
+    "Top prompts": "Prompt phổ biến",
+    "analyzed": "đã phân tích",
+    "Logs analyzed": "Nhật ký đã phân tích",
+    "Data scanned": "Dữ liệu đã quét",
+    "Summary channel": "Kênh tóm tắt"
   }
 }

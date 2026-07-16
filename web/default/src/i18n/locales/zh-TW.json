@@ -5110,6 +5110,22 @@
     "No report for the selected date": "所選日期沒有報告",
     "User ID (admin)": "使用者 ID（管理員）",
     "AI Summary": "AI 總結",
-    "Statistics": "統計資料"
+    "Statistics": "統計資料",
+    "Daily usage summary": "每日使用總結",
+    "streaming": "串流",
+    "Avg latency": "平均延遲",
+    "Models used": "使用模型數",
+    "Generated": "產生於",
+    "Activity by hour": "依小時活動",
+    "unique": "種",
+    "top": "最多",
+    "Token usage": "Token 用量",
+    "Prompt tokens": "輸入 Token",
+    "Completion tokens": "輸出 Token",
+    "Top prompts": "高頻提示詞",
+    "analyzed": "已分析",
+    "Logs analyzed": "已分析日誌",
+    "Data scanned": "掃描資料量",
+    "Summary channel": "總結渠道"
   }
 }

@@ -16,88 +16,88 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useQuery } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
-import { SectionPageLayout } from "@/components/layout";
-import { Input } from "@/components/ui/input";
+import { SectionPageLayout } from '@/components/layout'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ROLE } from "@/lib/roles";
-import { useAuthStore } from "@/stores/auth-store";
+} from '@/components/ui/select'
+import { ROLE } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 
-import { getUserReport, listUserReports } from "./api";
-import { ReportViewer } from "./components/report-viewer";
+import { getUserReport, listUserReports } from './api'
+import { ReportViewer } from './components/report-viewer'
 
 function CenterState({ children }: { children: ReactNode }) {
   return (
-    <div className="text-muted-foreground flex h-full min-h-40 items-center justify-center gap-2 text-sm">
+    <div className='text-muted-foreground flex h-full min-h-40 items-center justify-center gap-2 text-sm'>
       {children}
     </div>
-  );
+  )
 }
 
 export function UserReports() {
-  const { t } = useTranslation();
-  const role = useAuthStore((s) => s.auth.user?.role) ?? 0;
-  const isAdmin = role >= ROLE.ADMIN;
+  const { t } = useTranslation()
+  const role = useAuthStore((s) => s.auth.user?.role) ?? 0
+  const isAdmin = role >= ROLE.ADMIN
 
   // 管理员可输入 user_id 查看他人；为空则查看自己。
   const [targetUserId, setTargetUserId] = useState<number | undefined>(
-    undefined,
-  );
-  const [userIdInput, setUserIdInput] = useState("");
+    undefined
+  )
+  const [userIdInput, setUserIdInput] = useState('')
   const [selectedTokenId, setSelectedTokenId] = useState<number | undefined>(
-    undefined,
-  );
+    undefined
+  )
   const [selectedDate, setSelectedDate] = useState<string | undefined>(
-    undefined,
-  );
+    undefined
+  )
 
   const listQuery = useQuery({
-    queryKey: ["user-reports", "list", targetUserId ?? "self"],
+    queryKey: ['user-reports', 'list', targetUserId ?? 'self'],
     queryFn: () => listUserReports(targetUserId),
     select: (res) => (res.success ? (res.data ?? []) : []),
     staleTime: 60_000,
-  });
-  const entries = useMemo(() => listQuery.data ?? [], [listQuery.data]);
+  })
+  const entries = useMemo(() => listQuery.data ?? [], [listQuery.data])
 
   const tokenIds = useMemo(() => {
-    const set = new Set<number>();
-    entries.forEach((entry) => set.add(entry.token_id));
-    return [...set].sort((a, b) => a - b);
-  }, [entries]);
+    const set = new Set<number>()
+    entries.forEach((entry) => set.add(entry.token_id))
+    return [...set].sort((a, b) => a - b)
+  }, [entries])
 
   // 纯派生当前选中项：未选或选中项已失效时回退到最新，避免额外的 effect。
   const effectiveTokenId =
     selectedTokenId != null && tokenIds.includes(selectedTokenId)
       ? selectedTokenId
-      : tokenIds[0];
+      : tokenIds[0]
 
   const dates = useMemo(
     () =>
       entries
         .filter((entry) => entry.token_id === effectiveTokenId)
         .map((entry) => entry.date),
-    [entries, effectiveTokenId],
-  );
+    [entries, effectiveTokenId]
+  )
   const effectiveDate =
     selectedDate != null && dates.includes(selectedDate)
       ? selectedDate
-      : dates[0];
+      : dates[0]
 
   const contentQuery = useQuery({
     queryKey: [
-      "user-reports",
-      "content",
-      targetUserId ?? "self",
+      'user-reports',
+      'content',
+      targetUserId ?? 'self',
       effectiveTokenId,
       effectiveDate,
     ],
@@ -110,66 +110,66 @@ export function UserReports() {
     enabled: effectiveTokenId != null && effectiveDate != null,
     select: (res) => (res.success ? (res.data ?? null) : null),
     staleTime: 60_000,
-  });
+  })
 
   const commitUserId = () => {
-    const trimmed = userIdInput.trim();
-    const parsed = Number(trimmed);
+    const trimmed = userIdInput.trim()
+    const parsed = Number(trimmed)
     setTargetUserId(
-      trimmed && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined,
-    );
-    setSelectedTokenId(undefined);
-    setSelectedDate(undefined);
-  };
+      trimmed && Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+    )
+    setSelectedTokenId(undefined)
+    setSelectedDate(undefined)
+  }
 
   const loadingState = (
     <CenterState>
-      <Loader2 className="size-4 animate-spin" />
-      {t("Loading...")}
+      <Loader2 className='size-4 animate-spin' />
+      {t('Loading...')}
     </CenterState>
-  );
+  )
 
-  let body: ReactNode;
+  let body: ReactNode
   if (listQuery.isLoading) {
-    body = loadingState;
+    body = loadingState
   } else if (entries.length === 0) {
-    body = <CenterState>{t("No reports found")}</CenterState>;
+    body = <CenterState>{t('No reports found')}</CenterState>
   } else if (contentQuery.isLoading) {
-    body = loadingState;
+    body = loadingState
   } else if (contentQuery.data == null) {
-    body = <CenterState>{t("No report for the selected date")}</CenterState>;
+    body = <CenterState>{t('No report for the selected date')}</CenterState>
   } else {
-    body = <ReportViewer content={contentQuery.data} />;
+    body = <ReportViewer content={contentQuery.data} />
   }
 
   return (
     <SectionPageLayout>
-      <SectionPageLayout.Title>{t("Usage Summary")}</SectionPageLayout.Title>
+      <SectionPageLayout.Title>{t('Usage Summary')}</SectionPageLayout.Title>
       <SectionPageLayout.Actions>
         {isAdmin && (
           <Input
             value={userIdInput}
             onChange={(event) => setUserIdInput(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") commitUserId();
+              if (event.key === 'Enter') commitUserId()
             }}
             onBlur={commitUserId}
-            placeholder={t("User ID (admin)")}
-            inputMode="numeric"
-            className="h-8 w-36"
+            placeholder={t('User ID (admin)')}
+            inputMode='numeric'
+            className='h-8 w-36'
           />
         )}
         {tokenIds.length > 0 && (
           <Select
-            value={effectiveTokenId != null ? String(effectiveTokenId) : ""}
+            value={effectiveTokenId != null ? String(effectiveTokenId) : ''}
             onValueChange={(value) => {
-              if (value == null) return;
-              setSelectedTokenId(Number(value));
-              setSelectedDate(undefined);
+              if (value == null) return
+              setSelectedTokenId(Number(value))
+              setSelectedDate(undefined)
             }}
           >
-            <SelectTrigger className="h-8 w-40">
-              <SelectValue placeholder={t("Select token")} />
+            <SelectTrigger className='h-8 w-40'>
+              <SelectValue placeholder={t('Select token')} />
             </SelectTrigger>
             <SelectContent>
               {tokenIds.map((id) => (
@@ -182,11 +182,11 @@ export function UserReports() {
         )}
         {dates.length > 0 && (
           <Select
-            value={effectiveDate ?? ""}
+            value={effectiveDate ?? ''}
             onValueChange={(value) => setSelectedDate(value ?? undefined)}
           >
-            <SelectTrigger className="h-8 w-40">
-              <SelectValue placeholder={t("Select date")} />
+            <SelectTrigger className='h-8 w-40'>
+              <SelectValue placeholder={t('Select date')} />
             </SelectTrigger>
             <SelectContent>
               {dates.map((date) => (
@@ -200,5 +200,5 @@ export function UserReports() {
       </SectionPageLayout.Actions>
       <SectionPageLayout.Content>{body}</SectionPageLayout.Content>
     </SectionPageLayout>
-  );
+  )
 }

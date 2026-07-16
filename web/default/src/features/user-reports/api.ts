@@ -16,38 +16,38 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { api } from "@/lib/api";
+import { api } from '@/lib/api'
 
-import type { ApiEnvelope, UserReportContent, UserReportEntry } from "./types";
+import type { ApiEnvelope, UserReportContent, UserReportEntry } from './types'
 
 // targetUserId 为空 => 查看自己（/self 路由）；有值 => 管理员按 user_id 查看他人。
 export async function listUserReports(
-  targetUserId?: number,
+  targetUserId?: number
 ): Promise<ApiEnvelope<UserReportEntry[]>> {
   const path =
     targetUserId != null
       ? `/api/user_report?user_id=${targetUserId}`
-      : "/api/user_report/self";
-  const res = await api.get(path);
-  return res.data;
+      : '/api/user_report/self'
+  const res = await api.get(path)
+  return res.data
 }
 
 export async function getUserReport(params: {
-  targetUserId?: number;
-  tokenId: number;
-  date: string;
+  targetUserId?: number
+  tokenId: number
+  date: string
 }): Promise<ApiEnvelope<UserReportContent | null>> {
   const query = new URLSearchParams({
     token_id: String(params.tokenId),
     date: params.date,
-  });
+  })
   if (params.targetUserId != null) {
-    query.set("user_id", String(params.targetUserId));
+    query.set('user_id', String(params.targetUserId))
   }
   const base =
     params.targetUserId != null
-      ? "/api/user_report/content"
-      : "/api/user_report/self/content";
-  const res = await api.get(`${base}?${query.toString()}`);
-  return res.data;
+      ? '/api/user_report/content'
+      : '/api/user_report/self/content'
+  const res = await api.get(`${base}?${query.toString()}`)
+  return res.data
 }
