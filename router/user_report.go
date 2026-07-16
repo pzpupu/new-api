@@ -15,4 +15,7 @@ func registerUserReportRoutes(apiRouter *gin.RouterGroup) {
 	r.GET("/self/content", middleware.UserAuth(), controller.GetUserReportContentSelf)
 	r.GET("", middleware.AdminAuth(), controller.GetUserReports)
 	r.GET("/content", middleware.AdminAuth(), controller.GetUserReportContent)
+	// 管理员每日使用总览：全站聚合，key 为 daily-overview/{date}.json，仅管理员可见。
+	r.GET("/daily_overview", middleware.AdminAuth(), controller.GetDailyOverviews)
+	r.GET("/daily_overview/content", middleware.AdminAuth(), controller.GetDailyOverviewContent)
 }
